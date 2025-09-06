@@ -19,12 +19,12 @@ npm --version
 ## Installation
 
 1. **Clone or Download the Project**:
-   - if using Git: `git clone <repository-url>`
+   - if using Git: `git clone https://github.com/alzweidi/qm3d.git`
    - or download the project ZIP and extract it to your desired location.
 
 2. **Navigate to the Project Directory**:
    ```bash
-   cd /path/to/cool_engines
+   cd /path/to/qm3d
    ```
 
 3. **Install Dependencies**:
