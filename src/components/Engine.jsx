@@ -1,0 +1,461 @@
+// Main quantum wave engine component
+// Orchestrates physics simulation, rendering, and user interface
+
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import Controls from './Controls.jsx';
+import { runFFTSelfTests } from '../physics/fft.js';
+import { 
+  presetFree, 
+  presetPlaneBarrier, 
+  presetBoxWell, 
+  presetSphere, 
+  presetHarmonic 
+} from '../physics/potentials.js';
+import {
+  createCoordinateArray,
+  createKSpaceArrays,
+  buildKineticExponentials,
+  buildPotentialExponentials,
+  createAbsorbingBoundary,
+  timeStep,
+  addPacket3D,
+  renormalize
+} from '../physics/quantum.js';
+import {
+  initializeThreeJS,
+  createQuantumPointCloud,
+  createBoundingBox,
+  updatePointCloud,
+  handleResize,
+  renderScene,
+  disposeThreeJS
+} from '../rendering/visualization.js';
+
+export default function QuantumWaveEngine() {
+  // Simulation parameters
+  const [N, setN] = useState(32);
+  const [L, setL] = useState(10);
+  const dx = useMemo(() => L / N, [L, N]);
+  const [dtScale, setDtScale] = useState(0.08);
+  const dt = dtScale * dx * dx;
+  const cellVol = useMemo(() => Math.pow(L / N, 3), [L, N]);
+  const [stepsPerFrame, setStepsPerFrame] = useState(1);
+
+  // Absorbing boundaries
+  const [absorbFrac, setAbsorbFrac] = useState(0.15);
+  const [absorbStrength, setAbsorbStrength] = useState(3.0);
+
+  // Wave packet parameters
+  const [sigma, setSigma] = useState(0.6);
+  const [k0x, setK0x] = useState(8.0);
+  const [k0y, setK0y] = useState(0.0);
+  const [k0z, setK0z] = useState(0.0);
+  const [amp, setAmp] = useState(1.0);
+  const [x0, setX0] = useState(-L / 4);
+  const [y0, setY0] = useState(0);
+  const [z0, setZ0] = useState(0);
+
+  // Visualization
+  const [densityScale, setDensityScale] = useState(1.2);
+  const [showPhase, setShowPhase] = useState(true);
+  const [running, setRunning] = useState(true);
+
+  // Refs for DOM and Three.js
+  const mountRef = useRef(null);
+  const threeRefs = useRef({});
+  const maxDRef = useRef(1e-9);
+
+  // Physics arrays
+  const size = useMemo(() => N * N * N, [N]);
+  const psiRe = useRef(new Float32Array(size));
+  const psiIm = useRef(new Float32Array(size));
+  const V = useRef(new Float32Array(size));
+  const expK = useRef(new Float32Array(2 * size));
+  const expVh = useRef(new Float32Array(2 * size));
+  const capS2Ref = useRef(new Float32Array(size));
+
+  // Scratch arrays for computations
+  const gXRef = useRef(new Float32Array(N));
+  const gYRef = useRef(new Float32Array(N));
+  const gZRef = useRef(new Float32Array(N));
+  const pXRef = useRef(new Float32Array(N));
+  const pYRef = useRef(new Float32Array(N));
+  const pZRef = useRef(new Float32Array(N));
+  const scratchRe = useRef(new Float32Array(N));
+  const scratchIm = useRef(new Float32Array(N));
+
+  // Coordinate and k-space arrays
+  const coord = useMemo(() => createCoordinateArray(N, L), [N, L]);
+  const kArrays = useMemo(() => createKSpaceArrays(N, L), [N, L]);
+
+  // Initialize arrays when N or L changes
+  useEffect(() => {
+    const newSize = N * N * N;
+    psiRe.current = new Float32Array(newSize);
+    psiIm.current = new Float32Array(newSize);
+    V.current = new Float32Array(newSize);
+    expK.current = new Float32Array(2 * newSize);
+    expVh.current = new Float32Array(2 * newSize);
+
+    gXRef.current = new Float32Array(N);
+    gYRef.current = new Float32Array(N);
+    gZRef.current = new Float32Array(N);
+    pXRef.current = new Float32Array(N);
+    pYRef.current = new Float32Array(N);
+    pZRef.current = new Float32Array(N);
+    scratchRe.current = new Float32Array(N);
+    scratchIm.current = new Float32Array(N);
+
+    V.current.fill(0);
+    psiRe.current.fill(0);
+    psiIm.current.fill(0);
+    maxDRef.current = 1e-9;
+
+    initializeVisualization();
+    rebuildPotentialExponentials();
+  }, [N, L]);
+
+  // Clamp packet center positions to domain
+  useEffect(() => {
+    const clamp = (v) => Math.max(-L/2, Math.min(L/2, v));
+    setX0(x => clamp(x));
+    setY0(y => clamp(y));
+    setZ0(z => clamp(z));
+  }, [L]);
+
+  // Update absorbing boundaries
+  useEffect(() => {
+    capS2Ref.current = createAbsorbingBoundary(N, absorbFrac);
+    rebuildPotentialExponentials();
+  }, [N, absorbFrac]);
+
+  // Update kinetic exponentials
+  useEffect(() => {
+    buildKineticExponentials(expK.current, kArrays, N, dt);
+  }, [N, L, dt, kArrays]);
+
+  // Update potential exponentials
+  useEffect(() => {
+    rebuildPotentialExponentials();
+  }, [dt, N, absorbStrength, absorbFrac]);
+
+  function rebuildPotentialExponentials() {
+    buildPotentialExponentials(
+      expVh.current, 
+      V.current, 
+      capS2Ref.current, 
+      dt, 
+      absorbStrength
+    );
+  }
+
+  function initializeVisualization() {
+    disposeThreeJS(threeRefs.current);
+    
+    const threeObjects = initializeThreeJS(mountRef.current, L);
+    const pointCloudObjects = createQuantumPointCloud(
+      coord, N, threeObjects.maxPointSize, showPhase
+    );
+    const boxHelper = createBoundingBox(L);
+
+    threeObjects.scene.add(pointCloudObjects.points);
+    threeObjects.scene.add(boxHelper);
+
+    threeRefs.current = {
+      ...threeObjects,
+      ...pointCloudObjects,
+      boxHelper
+    };
+
+    handleResize(
+      threeObjects.renderer, 
+      threeObjects.camera, 
+      mountRef.current, 
+      pointCloudObjects.points
+    );
+  }
+
+  function renderOnce() {
+    const { renderer, scene, camera, controls } = threeRefs.current;
+    renderScene(renderer, scene, camera, controls);
+  }
+
+  // Update visualization when showPhase changes
+  useEffect(() => {
+    const { points } = threeRefs.current;
+    if (points && points.material && points.material.uniforms && points.material.uniforms.uShowPhase) {
+      points.material.uniforms.uShowPhase.value = showPhase ? 1.0 : 0.0;
+    }
+    updateVisualization();
+    renderOnce();
+  }, [showPhase]);
+
+  // Handle window resize
+  useEffect(() => {
+    const onWindowResize = () => {
+      const { renderer, camera, points } = threeRefs.current;
+      handleResize(renderer, camera, mountRef.current, points);
+      renderOnce();
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', onWindowResize);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('resize', onWindowResize);
+      }
+      disposeThreeJS(threeRefs.current);
+    };
+  }, []);
+
+  function updateVisualization() {
+    const { ampAttr, phaseAttr } = threeRefs.current;
+    if (ampAttr && phaseAttr) {
+      updatePointCloud(
+        psiRe.current, 
+        psiIm.current, 
+        ampAttr, 
+        phaseAttr, 
+        maxDRef, 
+        densityScale, 
+        showPhase
+      );
+    }
+  }
+
+  // Animation loop
+  useEffect(() => {
+    let raf = 0;
+
+    const tick = () => {
+      if (typeof document !== 'undefined' && document.hidden) {
+        raf = 0;
+        return;
+      }
+
+      const { controls } = threeRefs.current;
+      controls?.update();
+
+      if (running) {
+        for (let s = 0; s < stepsPerFrame; s++) {
+          timeStep(
+            psiRe.current,
+            psiIm.current,
+            expVh.current,
+            expK.current,
+            N,
+            scratchRe.current,
+            scratchIm.current
+          );
+        }
+        updateVisualization();
+        renderOnce();
+        raf = requestAnimationFrame(tick);
+      }
+    };
+
+    const onControlsChange = () => {
+      if (!running) renderOnce();
+    };
+
+    const { controls } = threeRefs.current;
+    if (controls && controls.addEventListener) {
+      controls.addEventListener('change', onControlsChange);
+    }
+
+    const onVis = () => {
+      if (typeof document !== 'undefined' && !document.hidden && running && !raf) {
+        raf = requestAnimationFrame(tick);
+      }
+    };
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onVis);
+    }
+
+    if (running) {
+      raf = requestAnimationFrame(tick);
+    } else {
+      renderOnce();
+    }
+
+    return () => {
+      cancelAnimationFrame(raf);
+      if (controls && controls.removeEventListener) {
+        controls.removeEventListener('change', onControlsChange);
+      }
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', onVis);
+      }
+    };
+  }, [running, stepsPerFrame, dt, densityScale, showPhase]);
+
+  // Potential preset functions
+  function handlePresetFree() {
+    presetFree(V.current);
+    rebuildPotentialExponentials();
+  }
+
+  function handlePresetPlaneBarrier() {
+    presetPlaneBarrier(V.current, coord, N);
+    rebuildPotentialExponentials();
+  }
+
+  function handlePresetBoxWell() {
+    presetBoxWell(V.current, coord, N, L);
+    rebuildPotentialExponentials();
+  }
+
+  function handlePresetSphere() {
+    presetSphere(V.current, coord, N, L);
+    rebuildPotentialExponentials();
+  }
+
+  function handlePresetHarmonic() {
+    presetHarmonic(V.current, coord, N);
+    rebuildPotentialExponentials();
+  }
+
+  function handleAddPacket() {
+    addPacket3D(
+      psiRe.current,
+      psiIm.current,
+      coord,
+      N,
+      x0, y0, z0,
+      sigma, sigma, sigma,
+      k0x, k0y, k0z,
+      amp,
+      gXRef.current,
+      gYRef.current,
+      gZRef.current,
+      pXRef.current,
+      pYRef.current,
+      pZRef.current
+    );
+    updateVisualization();
+    renderOnce();
+  }
+
+  function handleResetPsi() {
+    psiRe.current.fill(0);
+    psiIm.current.fill(0);
+    maxDRef.current = 1e-9;
+    updateVisualization();
+    renderOnce();
+  }
+
+  // Run self-tests on mount
+  useEffect(() => {
+    runFFTSelfTests();
+  }, []);
+
+  return (
+    <div className="w-full max-w-6xl mx-auto p-4">
+      <h1 className="text-2xl font-semibold text-white mb-2">
+        Interactive Quantum Wave Simulator — 3D (Split–Step FFT)
+      </h1>
+      <p className="text-slate-300 mb-3">
+        Add a 3D Gaussian packet, choose a potential, and orbit the volume. 
+        Points encode |ψ|² by size and arg(ψ) by hue.
+      </p>
+
+      <div className="grid lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 bg-slate-900/60 rounded-2xl p-3 shadow">
+          <div 
+            ref={mountRef} 
+            className="w-full" 
+            style={{ height: "min(60vh, 600px)" }} 
+          />
+          <div className="flex gap-2 mt-3 flex-wrap">
+            <button 
+              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white" 
+              onClick={() => setRunning(r => !r)}
+            >
+              {running ? "Pause" : "Run"}
+            </button>
+            <button 
+              className="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white" 
+              onClick={handleResetPsi}
+            >
+              Reset ψ
+            </button>
+            <button 
+              className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white" 
+              onClick={handleAddPacket}
+            >
+              Add Packet
+            </button>
+            <button 
+              className="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white" 
+              onClick={handlePresetFree}
+            >
+              Free
+            </button>
+            <button 
+              className="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white" 
+              onClick={handlePresetPlaneBarrier}
+            >
+              Plane barrier
+            </button>
+            <button 
+              className="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white" 
+              onClick={handlePresetBoxWell}
+            >
+              Box well
+            </button>
+            <button 
+              className="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white" 
+              onClick={handlePresetSphere}
+            >
+              Spherical well
+            </button>
+            <button 
+              className="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white" 
+              onClick={handlePresetHarmonic}
+            >
+              Harmonic
+            </button>
+          </div>
+        </div>
+
+        <Controls
+          N={N} setN={setN}
+          L={L} setL={setL}
+          dtScale={dtScale} setDtScale={setDtScale}
+          dt={dt}
+          stepsPerFrame={stepsPerFrame} setStepsPerFrame={setStepsPerFrame}
+          absorbFrac={absorbFrac} setAbsorbFrac={setAbsorbFrac}
+          absorbStrength={absorbStrength} setAbsorbStrength={setAbsorbStrength}
+          sigma={sigma} setSigma={setSigma}
+          k0x={k0x} setK0x={setK0x}
+          k0y={k0y} setK0y={setK0y}
+          k0z={k0z} setK0z={setK0z}
+          amp={amp} setAmp={setAmp}
+          x0={x0} setX0={setX0}
+          y0={y0} setY0={setY0}
+          z0={z0} setZ0={setZ0}
+          densityScale={densityScale} setDensityScale={setDensityScale}
+          showPhase={showPhase} setShowPhase={setShowPhase}
+          running={running} setRunning={setRunning}
+          onAddPacket={handleAddPacket}
+          onResetPsi={handleResetPsi}
+          onPresetFree={handlePresetFree}
+          onPresetPlaneBarrier={handlePresetPlaneBarrier}
+          onPresetBoxWell={handlePresetBoxWell}
+          onPresetSphere={handlePresetSphere}
+          onPresetHarmonic={handlePresetHarmonic}
+        />
+      </div>
+
+      <div className="text-slate-400 text-xs mt-4 leading-relaxed">
+        <p>
+          tips: keep n=32 for smooth interactivity; use smaller <code>dt</code> for accuracy. The FFT implies periodic boundaries; the CAP
+          mitigates wrap‑around by damping outgoing flux. harmonic and spherical wells are good sanity checks (bound states / breathing modes).
+        </p>
+      </div>
+    </div>
+  );
+}
