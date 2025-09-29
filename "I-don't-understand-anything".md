@@ -6,17 +6,18 @@ Mouse / touch navigation (orbit controls): left‑drag orbits, wheel/trackpad zo
 
 **Sources:** three.js orbitcontrols
 
-# What You're Looking At
+## What You're Looking At
 
 Points encode probability density and phase: point size \( \propto |\psi| \) (that's √ of probability density \( |\psi|^2 \)); colour hue maps the phase \( \arg(\psi) \) from \( -\pi \to \pi \) around the colour wheel.
 
 *In plain words:* bigger points mean more likely; regions may look brighter mainly because many points overlap (additive blending). Colour shows the local wave's angle.
 
 **Sources:**
+
 - MIT OCW: probability density & current
 - MIT OCW Quantum I — lecture notes
 
-# Simulation Grid & Time
+## Simulation Grid & Time
 
 **Grid n (32/64):** number of samples along x, y, z (\( n^3 \) total). larger n resolves finer structure but needs more memory/compute.
 
@@ -39,10 +40,11 @@ Points encode probability density and phase: point size \( \propto |\psi| \) (th
 *In plain words:* think "wrap-around world"; turn on the sponge (cap) to stop echoes.
 
 **Sources:**
+
 - Bao 2003 — time-splitting spectral discretisations (SIAM)
 - MIT 18.336 — spectral methods (periodic domains)
 
-# Packet (Initial Wave)
+## Packet (Initial Wave)
 
 **σ (sigma):** spatial width of the gaussian packet. smaller σ → narrower in space but broader in momentum (Fourier/uncertainty trade-off).
 
@@ -61,10 +63,11 @@ Points encode probability density and phase: point size \( \propto |\psi| \) (th
 *In plain words:* how strong the new blob is; adding many blobs stacks them; the sponge can slowly fade them.
 
 **Sources:**
+
 - MIT Chemistry 5.73 — wavepackets & spreading
 - Group velocity primer (UT Austin)
 
-# Absorbing Boundaries (Cap)
+## Absorbing Boundaries (Cap)
 
 **Width:** thickness of the absorbing "sponge" near the box faces (as a fraction of the grid). reduces wrap-around reflections.
 
@@ -75,10 +78,11 @@ Points encode probability density and phase: point size \( \propto |\psi| \) (th
 *In plain words:* how aggressive the sponge is; crank it if you still see echoes, but don't overdo it.
 
 **Sources:**
+
 - Muga et al., complex absorbing potentials (Phys. Rep. 2004)
 - CAP method (arxiv overview)
 
-# Potentials (Presets)
+## Potentials (Presets)
 
 **Free:** \( v = 0 \) everywhere (pure transport/dispersion).
 
@@ -102,7 +106,7 @@ Points encode probability density and phase: point size \( \propto |\psi| \) (th
 
 **Sources:** quantum harmonic oscillator notes (UW / BU-style)
 
-# Rendering
+## Rendering
 
 **Density scale:** multiplies point size after auto-normalisation so faint regions are still visible; doesn't change physics.
 
@@ -117,10 +121,11 @@ Points encode probability density and phase: point size \( \propto |\psi| \) (th
 *In plain words:* if points won't get any bigger, your GPU has hit its limit.
 
 **Sources:**
+
 - MDN: getParameter & constants (ALIASED_POINT_SIZE_RANGE)
 - MDN: WebGL constants
 
-# Runtime Buttons
+## Runtime Buttons
 
 **Run / Pause:** toggles the Strang split-step evolution (v half-step → k full-step → v half-step). pausing freezes state.
 
@@ -140,7 +145,7 @@ Points encode probability density and phase: point size \( \propto |\psi| \) (th
 
 **Sources:** accuracy & splitting order — SIAM
 
-# Tips (Numerics & Physics)
+## Tips (Numerics & Physics)
 
 **Accuracy:** smaller dt and/or larger n → better time-splitting accuracy (Strang is 2nd order).
 
@@ -155,11 +160,12 @@ Points encode probability density and phase: point size \( \propto |\psi| \) (th
 *In plain words:* tight blobs blur quickly; bigger k makes them travel faster.
 
 **Sources:**
+
 - MIT OCW wavepackets
 - Bao 2003 — SIAM
 - MIT 18.336 spectral (periodic)
 
-# Further Reading (Reputable)
+## Further Reading (Reputable)
 
 Bao, Jin, & Markowich: time-splitting spectral methods for (non)linear Schrödinger — SIAM & JCP overviews: SIAM 2003, JCP 2002
 
