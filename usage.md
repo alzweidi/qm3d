@@ -4,13 +4,12 @@ this guide provides step-by-step instructions for installing dependencies, runni
 
 ## Prerequisites
 
-before getting started, ensure you have the following installed on your system:
-
 - **Node.js**: version 16 or higher (required for Vite and React). Download from [nodejs.org](https://nodejs.org/).
 - **npm**: comes bundled with Node.js. version 7 or higher is recommended.
-- **Modern Web Browser**: chrome, Firefox, Safari, or Edge with WebGL support enabled (required for Three.js rendering).
+- **Modern Web Browser**: Chrome, Firefox, Safari, or Edge with WebGL support enabled (required for Three.js rendering).
 
 to verify your Node.js and npm versions, run:
+
 ```bash
 node --version
 npm --version
@@ -23,20 +22,24 @@ npm --version
    - or download the project ZIP and extract it to your desired location.
 
 2. **Navigate to the Project Directory**:
+
    ```bash
    cd /path/to/qm3d
    ```
 
 3. **Install Dependencies**:
    run the following command to install all required packages:
+
    ```bash
    npm install
    ```
+
    this will install React, ReactDOM, Three.js, Vite, Tailwind CSS, and other development dependencies as specified in `package.json`.
 
 ## Running the Development Server
 
 1. **Start the Development Server**:
+
    ```bash
    npm run dev
    ```
@@ -123,7 +126,6 @@ this prevents unwanted reflections from the periodic boundaries imposed by the F
 
 6. **Linting Errors**:
    - run `npm run lint` to check for code style issues.
-   - fix any reported problems before committing changes.
 
 ### Additional Resources
 
