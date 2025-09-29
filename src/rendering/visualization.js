@@ -17,7 +17,8 @@ export function initializeThreeJS(mountElement, L) {
 
   // Create scene
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0b1220);
+  // Monochrome UI theme: pure black background
+  scene.background = new THREE.Color(0x000000);
 
   // Create camera
   const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 1000);
@@ -123,7 +124,8 @@ export function createBoundingBox(L) {
     new THREE.Vector3(-L/2, -L/2, -L/2), 
     new THREE.Vector3(L/2, L/2, L/2)
   );
-  return new THREE.Box3Helper(box, new THREE.Color(0x334155));
+  // Neutral gray box lines for monochrome aesthetic
+  return new THREE.Box3Helper(box, new THREE.Color(0x5a5a5a));
 }
 
 /**
