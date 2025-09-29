@@ -353,17 +353,17 @@ export default function QuantumWaveEngine() {
   }, []);
 
   return (
-    <div className="w-full max-w-6xl mx-auto p-4">
-      <h1 className="text-2xl font-semibold text-white mb-2">
+    <div className="w-full max-w-6xl mx-auto p-4 md:p-6">
+      <h1 className="text-2xl md:text-3xl font-semibold text-white tracking-tight mb-2">
         Interactive Quantum Wave Simulator — 3D (Split–Step FFT)
       </h1>
-      <p className="text-slate-300 mb-3">
+      <p className="text-slate-300 mb-4">
         Add a 3D Gaussian packet, choose a potential, and orbit the volume. 
         Points encode |ψ|² by size and arg(ψ) by hue.
       </p>
 
-      <div className="grid lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 bg-slate-900/60 rounded-2xl p-3 shadow">
+      <div className="grid lg:grid-cols-3 gap-4 md:gap-6">
+        <div className="lg:col-span-2 card p-4">
           <div 
             ref={mountRef} 
             className="w-full" 
@@ -371,49 +371,49 @@ export default function QuantumWaveEngine() {
           />
           <div className="flex gap-2 mt-3 flex-wrap">
             <button 
-              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white" 
+              className="btn btn--secondary" 
               onClick={() => setRunning(r => !r)}
             >
               {running ? "Pause" : "Run"}
             </button>
             <button 
-              className="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white" 
+              className="btn btn--secondary" 
               onClick={handleResetPsi}
             >
               Reset ψ
             </button>
             <button 
-              className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white" 
+              className="btn btn--primary" 
               onClick={handleAddPacket}
             >
               Add Packet
             </button>
             <button 
-              className="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white" 
+              className="btn btn--ghost" 
               onClick={handlePresetFree}
             >
               Free
             </button>
             <button 
-              className="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white" 
+              className="btn btn--ghost" 
               onClick={handlePresetPlaneBarrier}
             >
               Plane barrier
             </button>
             <button 
-              className="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white" 
+              className="btn btn--ghost" 
               onClick={handlePresetBoxWell}
             >
               Box well
             </button>
             <button 
-              className="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white" 
+              className="btn btn--ghost" 
               onClick={handlePresetSphere}
             >
               Spherical well
             </button>
             <button 
-              className="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white" 
+              className="btn btn--ghost" 
               onClick={handlePresetHarmonic}
             >
               Harmonic
@@ -450,7 +450,7 @@ export default function QuantumWaveEngine() {
         />
       </div>
 
-      <div className="text-slate-400 text-xs mt-4 leading-relaxed">
+      <div className="card p-3 md:p-4 text-slate-400 text-xs mt-4 leading-relaxed">
         <p>
           tips: keep n=32 for smooth interactivity; use smaller <code>dt</code> for accuracy. The FFT implies periodic boundaries; the CAP
           mitigates wrap‑around by damping outgoing flux. harmonic and spherical wells are good sanity checks (bound states / breathing modes).

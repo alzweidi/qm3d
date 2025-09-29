@@ -7,8 +7,8 @@ import React from 'react';
  * Reusable control component with label and input
  */
 const Control = ({ label, children }) => (
-  <div className="flex items-center justify-between gap-3 py-1">
-    <div className="text-sm text-slate-300 w-48">{label}</div>
+  <div className="flex items-center justify-between gap-3 py-1.5">
+    <div className="text-sm text-slate-200/90 w-48 font-medium">{label}</div>
     <div className="flex-1">{children}</div>
   </div>
 );
@@ -53,8 +53,8 @@ export default function Controls({
   onPresetHarmonic
 }) {
   return (
-    <div className="bg-slate-900/60 rounded-2xl p-4 shadow">
-      <h2 className="text-lg font-medium text-white mb-2">Controls</h2>
+    <div className="card p-4">
+      <h2 className="section-title text-base mb-2">Controls</h2>
 
       {/* Simulation Parameters */}
       <Control label={`Grid N = ${N}`}>
@@ -105,10 +105,10 @@ export default function Controls({
         />
       </Control>
 
-      <div className="h-px bg-slate-700 my-3" />
+      <div className="divider my-3" />
 
       {/* Wave Packet Parameters */}
-      <h3 className="text-white text-sm mb-1">Packet</h3>
+      <h3 className="section-title text-sm mb-1">Packet</h3>
       
       <Control label={`σ = ${sigma.toFixed(2)}`}>
         <input 
@@ -206,10 +206,10 @@ export default function Controls({
         />
       </Control>
 
-      <div className="h-px bg-slate-700 my-3" />
+      <div className="divider my-3" />
 
       {/* Absorbing Boundaries */}
-      <h3 className="text-white text-sm mb-1">Absorbing Boundaries (CAP)</h3>
+      <h3 className="section-title text-sm mb-1">Absorbing Boundaries (CAP)</h3>
       
       <Control label={`Width = ${(absorbFrac*100).toFixed(0)}%`}>
         <input 
@@ -235,10 +235,10 @@ export default function Controls({
         />
       </Control>
 
-      <div className="h-px bg-slate-700 my-3" />
+      <div className="divider my-3" />
 
       {/* Visualization */}
-      <h3 className="text-white text-sm mb-1">Visualization</h3>
+      <h3 className="section-title text-sm mb-1">Visualization</h3>
       
       <Control label={`Density scale = ${densityScale.toFixed(2)}`}>
         <input 
@@ -260,27 +260,27 @@ export default function Controls({
         />
       </Control>
 
-      <div className="h-px bg-slate-700 my-3" />
+      <div className="divider my-3" />
 
       {/* Action Buttons */}
       <div className="space-y-2">
         <div className="flex gap-2 flex-wrap">
           <button 
-            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white" 
+            className="btn btn--secondary" 
             onClick={() => setRunning(r => !r)}
           >
             {running ? "Pause" : "Run"}
           </button>
           
           <button 
-            className="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white" 
+            className="btn btn--secondary" 
             onClick={onResetPsi}
           >
             Reset ψ
           </button>
           
           <button 
-            className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white" 
+            className="btn btn--primary" 
             onClick={onAddPacket}
           >
             Add Packet
@@ -289,35 +289,35 @@ export default function Controls({
         
         <div className="flex gap-2 flex-wrap">
           <button 
-            className="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white" 
+            className="btn btn--ghost" 
             onClick={onPresetFree}
           >
             Free
           </button>
           
           <button 
-            className="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white" 
+            className="btn btn--ghost" 
             onClick={onPresetPlaneBarrier}
           >
             Plane barrier
           </button>
           
           <button 
-            className="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white" 
+            className="btn btn--ghost" 
             onClick={onPresetBoxWell}
           >
             Box well
           </button>
           
           <button 
-            className="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white" 
+            className="btn btn--ghost" 
             onClick={onPresetSphere}
           >
             Spherical well
           </button>
           
           <button 
-            className="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white" 
+            className="btn btn--ghost" 
             onClick={onPresetHarmonic}
           >
             Harmonic
