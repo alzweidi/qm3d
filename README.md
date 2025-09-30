@@ -1,6 +1,6 @@
 # 3d quantum wave engine
 
-an interactive 3d simulator for quantum wave functions using React and Three.js. employs split-step fft for efficient time evolution of wave packets in various potentials.
+an interactive 3d simulator for quantum wave functions using react and three.js. employs split-step fft for efficient time evolution of wave packets in various potentials.
 
 ## features
 

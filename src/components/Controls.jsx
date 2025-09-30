@@ -54,10 +54,10 @@ export default function Controls({
 }) {
   return (
     <div className="card p-4">
-      <h2 className="section-title text-base mb-2">Controls</h2>
+      <h2 className="section-title text-base mb-2">controls</h2>
 
       {/* Simulation Parameters */}
-      <Control label={`Grid N = ${N}`}>
+      <Control label={`grid n = ${N}`}>
         <input 
           type="range" 
           min={32} 
@@ -69,7 +69,7 @@ export default function Controls({
         />
       </Control>
       
-      <Control label={`Domain L = ${L.toFixed(1)}`}>
+      <Control label={`domain l = ${L.toFixed(1)}`}>
         <input 
           type="range" 
           min={6} 
@@ -108,7 +108,7 @@ export default function Controls({
       <div className="divider my-3" />
 
       {/* Wave Packet Parameters */}
-      <h3 className="section-title text-sm mb-1">Packet</h3>
+      <h3 className="section-title text-sm mb-1">packet</h3>
       
       <Control label={`σ = ${sigma.toFixed(2)}`}>
         <input 
@@ -122,7 +122,7 @@ export default function Controls({
         />
       </Control>
       
-      <Control label={`Center x = ${x0.toFixed(2)}`}>
+      <Control label={`centre x = ${x0.toFixed(2)}`}>
         <input 
           type="range" 
           min={-L/2} 
@@ -134,7 +134,7 @@ export default function Controls({
         />
       </Control>
       
-      <Control label={`Center y = ${y0.toFixed(2)}`}>
+      <Control label={`centre y = ${y0.toFixed(2)}`}>
         <input 
           type="range" 
           min={-L/2} 
@@ -146,7 +146,7 @@ export default function Controls({
         />
       </Control>
       
-      <Control label={`Center z = ${z0.toFixed(2)}`}>
+      <Control label={`centre z = ${z0.toFixed(2)}`}>
         <input 
           type="range" 
           min={-L/2} 
@@ -194,7 +194,7 @@ export default function Controls({
         />
       </Control>
       
-      <Control label={`Amplitude = ${amp.toFixed(2)}`}>
+      <Control label={`amplitude = ${amp.toFixed(2)}`}>
         <input 
           type="range" 
           min={0.5} 
@@ -209,9 +209,9 @@ export default function Controls({
       <div className="divider my-3" />
 
       {/* Absorbing Boundaries */}
-      <h3 className="section-title text-sm mb-1">Absorbing Boundaries (CAP)</h3>
+      <h3 className="section-title text-sm mb-1">absorbing boundaries (cap)</h3>
       
-      <Control label={`Width = ${(absorbFrac*100).toFixed(0)}%`}>
+      <Control label={`width = ${(absorbFrac*100).toFixed(0)}%`}>
         <input 
           type="range" 
           min={0.05} 
@@ -223,7 +223,7 @@ export default function Controls({
         />
       </Control>
       
-      <Control label={`Strength = ${absorbStrength.toFixed(2)}`}>
+      <Control label={`strength = ${absorbStrength.toFixed(2)}`}>
         <input 
           type="range" 
           min={1} 
@@ -238,9 +238,9 @@ export default function Controls({
       <div className="divider my-3" />
 
       {/* Visualization */}
-      <h3 className="section-title text-sm mb-1">Visualization</h3>
+      <h3 className="section-title text-sm mb-1">visualisation</h3>
       
-      <Control label={`Density scale = ${densityScale.toFixed(2)}`}>
+      <Control label={`density scale = ${densityScale.toFixed(2)}`}>
         <input 
           type="range" 
           min={0.4} 
@@ -252,7 +252,7 @@ export default function Controls({
         />
       </Control>
       
-      <Control label={`Phase hue = ${showPhase ? "on" : "off"}`}>
+      <Control label={`phase hue = ${showPhase ? "on" : "off"}`}>
         <input 
           type="checkbox" 
           checked={showPhase} 
@@ -269,21 +269,21 @@ export default function Controls({
             className="btn btn--secondary" 
             onClick={() => setRunning(r => !r)}
           >
-            {running ? "Pause" : "Run"}
+            {running ? "pause" : "run"}
           </button>
           
           <button 
             className="btn btn--secondary" 
             onClick={onResetPsi}
           >
-            Reset ψ
+            reset ψ
           </button>
           
           <button 
             className="btn btn--primary" 
             onClick={onAddPacket}
           >
-            Add Packet
+            add packet
           </button>
         </div>
         
@@ -292,35 +292,35 @@ export default function Controls({
             className="btn btn--ghost" 
             onClick={onPresetFree}
           >
-            Free
+            free
           </button>
           
           <button 
             className="btn btn--ghost" 
             onClick={onPresetPlaneBarrier}
           >
-            Plane barrier
+            plane barrier
           </button>
           
           <button 
             className="btn btn--ghost" 
             onClick={onPresetBoxWell}
           >
-            Box well
+            box well
           </button>
           
           <button 
             className="btn btn--ghost" 
             onClick={onPresetSphere}
           >
-            Spherical well
+            spherical well
           </button>
           
           <button 
             className="btn btn--ghost" 
             onClick={onPresetHarmonic}
           >
-            Harmonic
+            harmonic
           </button>
         </div>
       </div>

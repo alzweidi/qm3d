@@ -355,11 +355,10 @@ export default function QuantumWaveEngine() {
   return (
     <div className="w-full max-w-6xl mx-auto p-4 md:p-6">
       <h1 className="text-2xl md:text-3xl font-semibold text-white tracking-tight mb-2">
-        Interactive Quantum Wave Simulator — 3D (Split–Step FFT)
+        interactive quantum wave simulator: 3d (split-step fft)
       </h1>
       <p className="text-slate-300 mb-4">
-        Add a 3D Gaussian packet, choose a potential, and orbit the volume. 
-        Points encode |ψ|² by size and arg(ψ) by hue.
+        add a 3d gaussian packet, choose a potential, and orbit the volume. points encode |ψ|² by size and arg(ψ) by hue.
       </p>
 
       <div className="grid lg:grid-cols-3 gap-4 md:gap-6">
@@ -374,49 +373,49 @@ export default function QuantumWaveEngine() {
               className="btn btn--secondary" 
               onClick={() => setRunning(r => !r)}
             >
-              {running ? "Pause" : "Run"}
+              {running ? "pause" : "run"}
             </button>
             <button 
               className="btn btn--secondary" 
               onClick={handleResetPsi}
             >
-              Reset ψ
+              reset ψ
             </button>
             <button 
               className="btn btn--primary" 
               onClick={handleAddPacket}
             >
-              Add Packet
+              add packet
             </button>
             <button 
               className="btn btn--ghost" 
               onClick={handlePresetFree}
             >
-              Free
+              free
             </button>
             <button 
               className="btn btn--ghost" 
               onClick={handlePresetPlaneBarrier}
             >
-              Plane barrier
+              plane barrier
             </button>
             <button 
               className="btn btn--ghost" 
               onClick={handlePresetBoxWell}
             >
-              Box well
+              box well
             </button>
             <button 
               className="btn btn--ghost" 
               onClick={handlePresetSphere}
             >
-              Spherical well
+              spherical well
             </button>
             <button 
               className="btn btn--ghost" 
               onClick={handlePresetHarmonic}
             >
-              Harmonic
+              harmonic
             </button>
           </div>
         </div>
@@ -450,11 +449,31 @@ export default function QuantumWaveEngine() {
         />
       </div>
 
-      <div className="card p-3 md:p-4 text-slate-400 text-xs mt-4 leading-relaxed">
+      <div className="card p-3 md:p-4 text-slate-400 text-xs mt-4 leading-relaxed space-y-2">
         <p>
-          tips: keep n=32 for smooth interactivity; use smaller <code>dt</code> for accuracy. The FFT implies periodic boundaries; the CAP
-          mitigates wrap‑around by damping outgoing flux. harmonic and spherical wells are good sanity checks (bound states / breathing modes).
+          tips: keep n=32 for smooth interactivity. use smaller <code>dt</code> for accuracy. the fft implies periodic boundaries. the cap mitigates wrap-around by damping outgoing flux. harmonic and spherical wells are good sanity checks (bound states, breathing modes).
         </p>
+        <details className="mt-2">
+          <summary className="cursor-pointer text-slate-300 hover:text-white font-medium">help: controls explained</summary>
+          <div className="mt-2 text-slate-400 prose prose-sm prose-invert max-w-none">
+            <p>mouse/touch navigation: left-drag orbits, wheel/trackpad zooms, right-drag pans. this only moves the camera, not the physics.</p>
+            <p>points encode probability density and phase: size ∝ |ψ|, colour hue maps phase arg(ψ) from -π to π around the colour wheel.</p>
+            <p><strong>grid n (32/64):</strong> samples along x, y, z (n³ total). larger n resolves finer structure but needs more memory/compute.</p>
+            <p><strong>domain l:</strong> physical side length of the cube. spatial step is dx = l/n. increasing l makes the same packet look smaller.</p>
+            <p><strong>dt scale:</strong> sets time step via dt = dtScale × dx². smaller dt reduces splitting error.</p>
+            <p><strong>steps per frame:</strong> how many physics steps between renders.</p>
+            <p><strong>periodic boundaries:</strong> the fft method is periodic. waves exiting one face re-enter at the opposite face unless absorbed (see cap).</p>
+            <p><strong>σ (sigma):</strong> spatial width of gaussian packet. smaller σ spreads faster (fourier uncertainty trade-off).</p>
+            <p><strong>centre x/y/z:</strong> where you drop the packet inside the box (clamped to ±l/2).</p>
+            <p><strong>k0x/y/z:</strong> wave-vector components. set the direction and speed the blob travels.</p>
+            <p><strong>amplitude:</strong> linear scale of the packet you add.</p>
+            <p><strong>cap width:</strong> thickness of the absorbing sponge near the box faces. reduces wrap-around reflections.</p>
+            <p><strong>cap strength:</strong> how strongly the cap damps outgoing flux each step. too high can nibble the interior.</p>
+            <p><strong>potentials:</strong> free (v=0 everywhere), plane barrier (step on +x side), box well (cubic trap), spherical well (round trap), harmonic (spring to centre).</p>
+            <p><strong>density scale:</strong> multiplies point size after auto-normalisation.</p>
+            <p><strong>phase hue:</strong> toggles colour-by-phase.</p>
+          </div>
+        </details>
       </div>
     </div>
   );
