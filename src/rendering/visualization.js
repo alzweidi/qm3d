@@ -17,8 +17,8 @@ export function initializeThreeJS(mountElement, L) {
 
   // Create scene
   const scene = new THREE.Scene();
-  // Monochrome UI theme: pure black background
-  scene.background = new THREE.Color(0x000000);
+  // monochrome ui theme: medium grey background
+  scene.background = new THREE.Color(0x2a2a2a);
 
   // Create camera
   const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 1000);
