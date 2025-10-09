@@ -5,6 +5,14 @@ export default defineConfig({
   fullyParallel: false,
   retries: process.env.CI ? 1 : 0,
   timeout: 60_000,
+  expect: {
+    toHaveScreenshot: {
+      // Use a cross-OS snapshot path to avoid -linux/-darwin suffix divergence
+      // Resulting path for toHaveScreenshot('free-packet.png'):
+      // tests/e2e/app.spec.ts-snapshots/free-packet.png
+      pathTemplate: '{testDir}/{testFileDir}/{testFileName}-snapshots/{arg}{ext}',
+    },
+  },
   use: {
     baseURL: 'http://localhost:5173',
     viewport: { width: 1280, height: 800 },

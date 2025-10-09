@@ -1,5 +1,6 @@
 // Shared test utilities to reduce duplication across unit tests
 // Keep helpers here so SonarQube doesn't flag duplicate blocks in tests
+import { fft1d, fft1d_p, makeFFTPlan, fft3d } from '../../src/physics/fft.js';
 
 /**
  * Linear index for 3D -> 1D mapping used in physics arrays
@@ -36,4 +37,67 @@ export function fillRandomPair(re, im) {
     im[i] = Math.random() * 2 - 1;
   }
   return [re, im];
+}
+
+/**
+ * Expect planned FFT equals canonical FFT for forward or inverse case.
+ * direction: 'forward' | 'inverse'
+ */
+export function expectFft1dPlanEquivalence(N, direction = 'forward') {
+  const reA = new Float32Array(N);
+  const imA = new Float32Array(N);
+  fillRandomPair(reA, imA);
+
+  const reB = reA.slice();
+  const imB = imA.slice();
+
+  const plan = makeFFTPlan(N);
+
+  if (direction === 'forward') {
+    fft1d(reA, imA, false);
+    fft1d_p(reB, imB, false, plan);
+  } else {
+    // prepare with a forward first, then compare inverse paths
+    fft1d(reA, imA, false);
+    fft1d(reB, imB, false);
+    fft1d(reA, imA, true);
+    fft1d_p(reB, imB, true, plan);
+  }
+
+  for (let i = 0; i < N; i++) {
+    if (Math.abs(reA[i] - reB[i]) > 1e-10 || Math.abs(imA[i] - imB[i]) > 1e-10) {
+      throw new Error('Planned FFT differs from canonical FFT');
+    }
+  }
+}
+
+/**
+ * Compute rms error of a 3D FFT round-trip (forward then inverse).
+ */
+export function compute3dRoundTripError(N) {
+  const sz = N * N * N;
+  const re = new Float32Array(sz);
+  const im = new Float32Array(sz);
+  fillRandomPair(re, im);
+  const r0 = re.slice();
+  const i0 = im.slice();
+  const sRe = new Float32Array(N);
+  const sIm = new Float32Array(N);
+  fft3d(re, im, N, false, sRe, sIm);
+  fft3d(re, im, N, true, sRe, sIm);
+  return rmsRelativeErrorComplex(re, im, r0, i0);
+}
+
+/**
+ * Allocate packet scratch arrays used by addPacket3D in multiple tests.
+ */
+export function allocPacketScratch(N) {
+  return {
+    gX: new Float32Array(N),
+    gY: new Float32Array(N),
+    gZ: new Float32Array(N),
+    pX: new Float32Array(N),
+    pY: new Float32Array(N),
+    pZ: new Float32Array(N),
+  };
 }
