@@ -1,6 +1,9 @@
-# 3d quantum wave engine usage guide
+# 3D Quantum Wave Engine — Usage Guide
 
-this guide provides step-by-step instructions for installing dependencies, running the development server, and using the 3d quantum wave engine locally.
+This guide provides step-by-step instructions for installing dependencies,
+running the development server, and using the app locally.
+
+See Concepts & Reference: [usage/concepts.md](./usage/concepts.md)
 
 ## prerequisites
 
@@ -51,7 +54,7 @@ npm --version
 3. **stop the server**:
    - press `Ctrl + C` (or `Cmd + C` on macos) in the terminal to stop the development server.
 
-## using the 3d quantum wave engine
+## Using the app
 
 the application consists of a 3d visualisation canvas and a control panel. here's how to use it:
 

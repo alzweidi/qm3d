@@ -1,13 +1,13 @@
-// Quantum wave function operations and simulation logic
-// Split-step method for time evolution, wave packet creation, normalization
+// quantum wave function operations and simulation logic
+// split-step method for time evolution, wave packet creation, normalization
 
 import { fft3d } from './fft.js';
 
 /**
- * Create coordinate array for the simulation grid
- * @param {number} N - Grid size
- * @param {number} L - Domain size
- * @returns {Float32Array} Coordinate array
+ * create coordinate array for the simulation grid
+ * @param {number} N - grid size
+ * @param {number} L - domain size
+ * @returns {Float32Array} coordinate array
  */
 export function createCoordinateArray(N, L) {
   const arr = new Float32Array(N);
@@ -20,10 +20,10 @@ export function createCoordinateArray(N, L) {
 }
 
 /**
- * Create k-space arrays for kinetic energy operator
- * @param {number} N - Grid size
- * @param {number} L - Domain size
- * @returns {Object} Object containing kx2, ky2, kz2 arrays
+ * create k-space arrays for kinetic energy operator
+ * @param {number} N - grid size
+ * @param {number} L - domain size
+ * @returns {Object} object containing kx2, ky2, kz2 arrays
  */
 export function createKSpaceArrays(N, L) {
   const kOf = (n) => {
@@ -46,11 +46,11 @@ export function createKSpaceArrays(N, L) {
 }
 
 /**
- * Build exponential operators for kinetic energy evolution
- * @param {Float32Array} expK - Output array for kinetic exponentials
+ * build exponential operators for kinetic energy evolution
+ * @param {Float32Array} expK - output array for kinetic exponentials
  * @param {Object} kArrays - k-space arrays from createKSpaceArrays
- * @param {number} N - Grid size
- * @param {number} dt - Time step
+ * @param {number} N - grid size
+ * @param {number} dt - time step
  */
 export function buildKineticExponentials(expK, kArrays, N, dt) {
   const { kx2, ky2, kz2 } = kArrays;
@@ -74,12 +74,12 @@ export function buildKineticExponentials(expK, kArrays, N, dt) {
 }
 
 /**
- * Build exponential operators for potential energy evolution
- * @param {Float32Array} expVh - Output array for potential exponentials
- * @param {Float32Array} V - Potential array
- * @param {Float32Array} capS2 - Absorbing boundary array
- * @param {number} dt - Time step
- * @param {number} absorbStrength - Absorption strength
+ * build exponential operators for potential energy evolution
+ * @param {Float32Array} expVh - output array for potential exponentials
+ * @param {Float32Array} V - potential array
+ * @param {Float32Array} capS2 - absorbing boundary array
+ * @param {number} dt - time step
+ * @param {number} absorbStrength - absorption strength
  */
 export function buildPotentialExponentials(expVh, V, capS2, dt, absorbStrength) {
   const half = -0.5 * dt;
@@ -97,10 +97,10 @@ export function buildPotentialExponentials(expVh, V, capS2, dt, absorbStrength) 
 }
 
 /**
- * Create absorbing boundary (CAP) array
- * @param {number} N - Grid size
- * @param {number} absorbFrac - Fraction of domain for absorption
- * @returns {Float32Array} CAP array
+ * create absorbing boundary (cap) array
+ * @param {number} N - grid size
+ * @param {number} absorbFrac - fraction of domain for absorption
+ * @returns {Float32Array} cap array
  */
 export function createAbsorbingBoundary(N, absorbFrac) {
   const cap = new Float32Array(N*N*N);
@@ -127,10 +127,10 @@ export function createAbsorbingBoundary(N, absorbFrac) {
 }
 
 /**
- * Apply potential energy evolution for half time step
- * @param {Float32Array} psiRe - Real part of wave function
- * @param {Float32Array} psiIm - Imaginary part of wave function
- * @param {Float32Array} expVh - Potential exponentials
+ * apply potential energy evolution for half time step
+ * @param {Float32Array} psiRe - real part of wave function
+ * @param {Float32Array} psiIm - imaginary part of wave function
+ * @param {Float32Array} expVh - potential exponentials
  */
 export function potentialHalfStep(psiRe, psiIm, expVh) {
   const len = psiRe.length;
@@ -146,19 +146,19 @@ export function potentialHalfStep(psiRe, psiIm, expVh) {
 }
 
 /**
- * Apply kinetic energy evolution for full time step
- * @param {Float32Array} psiRe - Real part of wave function
- * @param {Float32Array} psiIm - Imaginary part of wave function
- * @param {Float32Array} expK - Kinetic exponentials
- * @param {number} N - Grid size
- * @param {Float32Array} scratchRe - Scratch array for FFT
+ * apply kinetic energy evolution for full time step
+ * @param {Float32Array} psiRe - real part of wave function
+ * @param {Float32Array} psiIm - imaginary part of wave function
+ * @param {Float32Array} expK - kinetic exponentials
+ * @param {number} N - grid size
+ * @param {Float32Array} scratchRe - scratch array for fft
  * @param {Float32Array} scratchIm - Scratch array for FFT
  */
 export function kineticFullStep(psiRe, psiIm, expK, N, scratchRe, scratchIm) {
-  // Forward FFT to momentum space
+  // forward FFT to momentum space
   fft3d(psiRe, psiIm, N, false, scratchRe, scratchIm);
   
-  // Apply kinetic energy operator
+  // apply kinetic energy operator
   const len = psiRe.length;
   for (let i = 0; i < len; i++) {
     const j = i << 1; 
@@ -170,19 +170,19 @@ export function kineticFullStep(psiRe, psiIm, expK, N, scratchRe, scratchIm) {
     psiIm[i] = ni;
   }
   
-  // Inverse FFT back to position space
+  // inverse FFT back to position space
   fft3d(psiRe, psiIm, N, true, scratchRe, scratchIm);
 }
 
 /**
- * Perform one time step using split-step method
- * @param {Float32Array} psiRe - Real part of wave function
- * @param {Float32Array} psiIm - Imaginary part of wave function
- * @param {Float32Array} expVh - Potential exponentials
- * @param {Float32Array} expK - Kinetic exponentials
- * @param {number} N - Grid size
- * @param {Float32Array} scratchRe - Scratch array for FFT
- * @param {Float32Array} scratchIm - Scratch array for FFT
+ * perform one time step using split-step method
+ * @param {Float32Array} psiRe - real part of wave function
+ * @param {Float32Array} psiIm - imaginary part of wave function
+ * @param {Float32Array} expVh - potential exponentials
+ * @param {Float32Array} expK - kinetic exponentials
+ * @param {number} N - grid size
+ * @param {Float32Array} scratchRe - scratch array for FFT
+ * @param {Float32Array} scratchIm - scratch array for FFT
  */
 export function timeStep(psiRe, psiIm, expVh, expK, N, scratchRe, scratchIm) {
   potentialHalfStep(psiRe, psiIm, expVh);
@@ -191,32 +191,32 @@ export function timeStep(psiRe, psiIm, expVh, expK, N, scratchRe, scratchIm) {
 }
 
 /**
- * Add a 3D Gaussian wave packet to the wave function
- * @param {Float32Array} psiRe - Real part of wave function
- * @param {Float32Array} psiIm - Imaginary part of wave function
- * @param {Float32Array} coord - Coordinate array
- * @param {number} N - Grid size
- * @param {number} cx - Center x position
- * @param {number} cy - Center y position
- * @param {number} cz - Center z position
- * @param {number} sx - Width in x direction
- * @param {number} sy - Width in y direction
- * @param {number} sz - Width in z direction
- * @param {number} kx - Wave vector x component
- * @param {number} ky - Wave vector y component
- * @param {number} kz - Wave vector z component
- * @param {number} scale - Overall amplitude
- * @param {Float32Array} gX - Scratch array for x Gaussian
- * @param {Float32Array} gY - Scratch array for y Gaussian
- * @param {Float32Array} gZ - Scratch array for z Gaussian
- * @param {Float32Array} pX - Scratch array for x phase
- * @param {Float32Array} pY - Scratch array for y phase
- * @param {Float32Array} pZ - Scratch array for z phase
+ * add a 3d gaussian wave packet to the wave function
+ * @param {Float32Array} psiRe - real part of wave function
+ * @param {Float32Array} psiIm - imaginary part of wave function
+ * @param {Float32Array} coord - coordinate array
+ * @param {number} N - grid size
+ * @param {number} cx - center x position
+ * @param {number} cy - center y position
+ * @param {number} cz - center z position
+ * @param {number} sx - width in x direction
+ * @param {number} sy - width in y direction
+ * @param {number} sz - width in z direction
+ * @param {number} kx - wave vector x component
+ * @param {number} ky - wave vector y component
+ * @param {number} kz - wave vector z component
+ * @param {number} scale - overall amplitude
+ * @param {Float32Array} gX - scratch array for x gaussian
+ * @param {Float32Array} gY - scratch array for y gaussian
+ * @param {Float32Array} gZ - scratch array for z gaussian
+ * @param {Float32Array} pX - scratch array for x phase
+ * @param {Float32Array} pY - scratch array for y phase
+ * @param {Float32Array} pZ - scratch array for z phase
  */
 export function addPacket3D(psiRe, psiIm, coord, N, cx, cy, cz, sx, sy, sz, kx, ky, kz, scale, gX, gY, gZ, pX, pY, pZ) {
   const s2x = sx*sx, s2y = sy*sy, s2z = sz*sz;
   
-  // Compute 1D Gaussians and phases
+  // compute 1D gaussians and phases
   for (let x = 0; x < N; x++) { 
     const X = coord[x]; 
     gX[x] = Math.exp(-((X-cx)*(X-cx))/(2*s2x)); 
@@ -233,7 +233,7 @@ export function addPacket3D(psiRe, psiIm, coord, N, cx, cy, cz, sx, sy, sz, kx, 
     pZ[z] = kz*(Z-cz); 
   }
 
-  // Add 3D Gaussian packet
+  // add 3D gaussian packet
   for (let z = 0; z < N; z++) {
     const zOff = N*N*z; 
     const gz = gZ[z]; 
@@ -254,10 +254,10 @@ export function addPacket3D(psiRe, psiIm, coord, N, cx, cy, cz, sx, sy, sz, kx, 
 }
 
 /**
- * Normalize the wave function to unit probability
- * @param {Float32Array} psiRe - Real part of wave function
- * @param {Float32Array} psiIm - Imaginary part of wave function
- * @param {number} cellVol - Volume of each grid cell
+ * normalise the wave function to unit probability
+ * @param {Float32Array} psiRe - real part of wave function
+ * @param {Float32Array} psiIm - imaginary part of wave function
+ * @param {number} cellVol - volume of each grid cell
  */
 export function renormalize(psiRe, psiIm, cellVol) {
   let sum = 0; 
@@ -274,11 +274,11 @@ export function renormalize(psiRe, psiIm, cellVol) {
 }
 
 /**
- * Calculate the total probability (norm) of the wave function
- * @param {Float32Array} psiRe - Real part of wave function
- * @param {Float32Array} psiIm - Imaginary part of wave function
- * @param {number} cellVol - Volume of each grid cell
- * @returns {number} Total probability
+ * calculate the total probability (norm) of the wave function
+ * @param {Float32Array} psiRe - real part of wave function
+ * @param {Float32Array} psiIm - imaginary part of wave function
+ * @param {number} cellVol - volume of each grid cell
+ * @returns {number} total probability
  */
 export function calculateNorm(psiRe, psiIm, cellVol) {
   let norm = 0; 

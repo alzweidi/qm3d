@@ -1,19 +1,39 @@
-# 3d quantum wave engine
+# 3D Quantum Wave Engine
 
-an interactive 3d simulator for quantum wave functions using react and three.js. employs split-step fft for efficient time evolution of wave packets in various potentials.
+An interactive 3D simulator for quantum wavefunctions in the browser.
+Built with React, Three.js, and a split-step FFT solver for time
+evolution under common potentials.
 
-## features
+## Features
 
-- gaussian wave packet injection with adjustable parameters
-- presets: free space, plane barrier, box well, spherical well, harmonic oscillator
-- real-time visualisation with phase colouring and orbital controls
-- absorbing boundaries to mitigate fft artefacts
-- adjustable grid size, time step, and rendering options
+- Gaussian wave packet injection with adjustable parameters
+- Presets: free space, plane barrier, box well, spherical well, harmonic oscillator
+- Real-time visualization with phase coloring and orbit controls
+- Absorbing boundaries (CAP) to mitigate periodic FFT wrap-around
+- Adjustable grid size, time step, and rendering options
 
-## usage
+## Quick start
 
-install dependencies with `npm install`, then run `npm run dev` to start the development server.
+Prerequisites: Node.js 16+ (includes npm 7+).
 
-## why?
+```bash
+npm install
+npm run dev
+```
 
-had an empty summer and no lectures. built a 2d one which was actually harder than the 3d one on my other repo if you want to check it out, or don't. i don't care.
+Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+## Usage & docs
+
+- See the Usage Guide: [usage.md](./usage.md)
+- Concepts & Reference: [usage/concepts.md](./usage/concepts.md)
+- Troubleshooting lives in the guide: [usage.md#troubleshooting](./usage.md#troubleshooting)
+
+## Tech stack
+
+React • Three.js • Vite • Tailwind CSS
+
+## Why
+
+Built as a summer project to explore split-step spectral solvers and WebGL.
+There’s also a 2D version in another repo.

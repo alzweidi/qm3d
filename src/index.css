@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Theme tokens: dark-only for now */
+/* theme tokens: dark-only for now */
 :root {
   --bg: hsl(0 0% 5%);
   --surface-1: hsl(220 8% 16%);
@@ -13,14 +13,14 @@
   --text-2: hsl(0 0% 72%);
   --muted: hsl(220 5% 60%);
 
-  /* Accent gradient: violet → cyan */
+  /* accent gradient: violet → cyan */
   --accent: hsl(0 0% 100%);
   --accent-2: hsl(0 0% 100%);
 
   --success: hsl(160 70% 45%);
   --warning: hsl(40 100% 55%);
   --error: hsl(0 85% 58%);
-  /* Button + focus tokens (white buttons on black bg) */
+  /* button + focus tokens (white buttons on black bg) */
   --btn-bg: hsl(0 0% 100%);
   --btn-text: hsl(0 0% 7%);
   --btn-border: hsl(0 0% 0% / 0.15);
@@ -55,7 +55,7 @@
   a { color: var(--accent); }
   ::selection { background: hsl(258 85% 63% / 0.25); }
 
-  /* Scrollbars */
+  /* scrollbars */
   *::-webkit-scrollbar { height: 10px; width: 10px; }
   *::-webkit-scrollbar-thumb {
     background: hsl(230 10% 35% / 0.7);
@@ -67,7 +67,7 @@
 }
 
 @layer components {
-  /* Card */
+  /* card */
   .card {
     background: var(--surface-1);
     border: 1px solid var(--border);
@@ -75,13 +75,13 @@
     box-shadow: var(--shadow-2);
   }
 
-  /* Section title */
+  /* section title */
   .section-title { color: var(--text-1); font-weight: 600; letter-spacing: 0.02em; }
 
-  /* Divider */
+  /* divider */
   .divider { height: 1px; background: var(--border); width: 100%; }
 
-  /* Buttons */
+  /* buttons */
   .btn {
     display: inline-flex;
     align-items: center;
@@ -109,7 +109,7 @@
   .btn--ghost { color: var(--btn-text); background: var(--btn-bg); border-color: var(--btn-border); }
   .btn--ghost:hover { background: #f5f5f5; }
 
-  /* Range slider */
+  /* range slider */
   input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; background: transparent; }
   input[type="range"]:focus { outline: none; }
   input[type="range"]::-webkit-slider-runnable-track { height: 6px; background: var(--surface-2); border-radius: 999px; }

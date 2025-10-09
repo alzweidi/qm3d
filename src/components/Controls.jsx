@@ -1,10 +1,10 @@
-// UI Controls component for quantum wave simulation parameters
-// Handles all user interface elements and parameter management
+// UI controls component for quantum wave simulation parameters
+// handles all user interface elements and parameter management
 
 import React from 'react';
 
 /**
- * Reusable control component with label and input
+ * reusable control component with label and input
  */
 const Control = ({ label, children }) => (
   <div className="flex items-center justify-between gap-3 py-1.5">
@@ -14,21 +14,21 @@ const Control = ({ label, children }) => (
 );
 
 /**
- * Main controls panel component
+ * main controls panel component
  */
 export default function Controls({
-  // Simulation parameters
+  // simulation parameters
   N, setN,
   L, setL,
   dtScale, setDtScale,
   dt,
   stepsPerFrame, setStepsPerFrame,
   
-  // Absorbing boundaries
+  // absorbing boundaries
   absorbFrac, setAbsorbFrac,
   absorbStrength, setAbsorbStrength,
   
-  // Wave packet parameters
+  // wave packet parameters
   sigma, setSigma,
   k0x, setK0x,
   k0y, setK0y,
@@ -38,11 +38,11 @@ export default function Controls({
   y0, setY0,
   z0, setZ0,
   
-  // Visualization
+  // visualisation
   densityScale, setDensityScale,
   showPhase, setShowPhase,
   
-  // Control actions
+  // control actions
   running, setRunning,
   onAddPacket,
   onResetPsi,
@@ -56,7 +56,7 @@ export default function Controls({
     <div className="card p-4">
       <h2 className="section-title text-base mb-2">controls</h2>
 
-      {/* Simulation Parameters */}
+      {/* simulation parameters */}
       <Control label={`grid n = ${N}`}>
         <input 
           type="range" 
@@ -107,7 +107,7 @@ export default function Controls({
 
       <div className="divider my-3" />
 
-      {/* Wave Packet Parameters */}
+      {/* wave packet parameters */}
       <h3 className="section-title text-sm mb-1">packet</h3>
       
       <Control label={`σ = ${sigma.toFixed(2)}`}>
@@ -208,7 +208,7 @@ export default function Controls({
 
       <div className="divider my-3" />
 
-      {/* Absorbing Boundaries */}
+      {/* absorbing boundaries */}
       <h3 className="section-title text-sm mb-1">absorbing boundaries (cap)</h3>
       
       <Control label={`width = ${(absorbFrac*100).toFixed(0)}%`}>
@@ -237,7 +237,7 @@ export default function Controls({
 
       <div className="divider my-3" />
 
-      {/* Visualization */}
+      {/* visualisation */}
       <h3 className="section-title text-sm mb-1">visualisation</h3>
       
       <Control label={`density scale = ${densityScale.toFixed(2)}`}>
@@ -262,7 +262,7 @@ export default function Controls({
 
       <div className="divider my-3" />
 
-      {/* Action Buttons */}
+      {/* action buttons */}
       <div className="space-y-2">
         <div className="flex gap-2 flex-wrap">
           <button 

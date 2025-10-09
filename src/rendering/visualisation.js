@@ -1,30 +1,30 @@
-// Three.js visualization setup and management
-// Scene creation, point cloud rendering, and camera controls
+// three.js visualisation setup and management
+// scene creation, point cloud rendering, and camera controls
 
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { createQuantumShaderMaterial } from './shaders.js';
 
 /**
- * Initialize Three.js scene, camera, renderer, and controls
+ * initialise three.js scene, camera, renderer, and controls
  * @param {HTMLElement} mountElement - DOM element to mount renderer
- * @param {number} L - Domain size for camera positioning
- * @returns {Object} Three.js objects and references
+ * @param {number} L - domain size for camera positioning
+ * @returns {Object} three.js objects and references
  */
-export function initializeThreeJS(mountElement, L) {
-  // Clean up any existing content
+export function initialiseThreeJS(mountElement, L) {
+  // clean up any existing content
   if (mountElement) mountElement.innerHTML = "";
 
-  // Create scene
+  // create scene
   const scene = new THREE.Scene();
   // monochrome ui theme: medium grey background
   scene.background = new THREE.Color(0x2a2a2a);
 
-  // Create camera
+  // create camera
   const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 1000);
   camera.position.set(0, 0, L * 1.8);
 
-  // Create renderer
+  // create renderer
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
   const dpr = Math.min(
     (typeof window !== 'undefined' && window.devicePixelRatio) ? 
@@ -38,14 +38,14 @@ export function initializeThreeJS(mountElement, L) {
     mountElement.appendChild(renderer.domElement);
   }
 
-  // Get GPU capabilities
+  // get GPU capabilities
   const gl = renderer.getContext();
   const range = gl && gl.getParameter ? 
     gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE) : [1, 64];
   const maxPointSize = Array.isArray(range) || (range && range.length) ? 
     range[1] : 64;
 
-  // Create orbit controls
+  // create orbit controls
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
@@ -59,17 +59,17 @@ export function initializeThreeJS(mountElement, L) {
 }
 
 /**
- * Create point cloud geometry and material for quantum wave visualization
- * @param {Float32Array} coord - Coordinate array
- * @param {number} N - Grid size
- * @param {number} maxPointSize - Maximum point size
- * @param {boolean} showPhase - Whether to show phase coloring
- * @returns {Object} Geometry, material, and attribute references
+ * create point cloud geometry and material for quantum wave visualisation
+ * @param {Float32Array} coord - coordinate array
+ * @param {number} N - grid size
+ * @param {number} maxPointSize - maximum point size
+ * @param {boolean} showPhase - whether to show phase colouring
+ * @returns {Object} geometry, material, and attribute references
  */
 export function createQuantumPointCloud(coord, N, maxPointSize, showPhase = true) {
   const size = N * N * N;
   
-  // Create position array
+  // create position array
   const positions = new Float32Array(size * 3);
   const amps = new Float32Array(size);
   const phases = new Float32Array(size);
@@ -85,7 +85,7 @@ export function createQuantumPointCloud(coord, N, maxPointSize, showPhase = true
     }
   }
 
-  // Create geometry
+  // create geometry
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   
@@ -98,10 +98,10 @@ export function createQuantumPointCloud(coord, N, maxPointSize, showPhase = true
   geometry.setAttribute('aPhase', phaseAttr);
   geometry.computeBoundingSphere();
 
-  // Create material
+  // create material
   const material = createQuantumShaderMaterial(maxPointSize, showPhase);
 
-  // Create points object
+  // create points object
   const points = new THREE.Points(geometry, material);
   points.frustumCulled = false;
 
@@ -115,28 +115,28 @@ export function createQuantumPointCloud(coord, N, maxPointSize, showPhase = true
 }
 
 /**
- * Create bounding box helper for the simulation domain
- * @param {number} L - Domain size
- * @returns {THREE.Box3Helper} Box helper object
+ * create bounding box helper for the simulation domain
+ * @param {number} L - domain size
+ * @returns {THREE.Box3Helper} box helper object
  */
 export function createBoundingBox(L) {
   const box = new THREE.Box3(
     new THREE.Vector3(-L/2, -L/2, -L/2), 
     new THREE.Vector3(L/2, L/2, L/2)
   );
-  // Neutral gray box lines for monochrome aesthetic
+  // neutral grey box lines for monochrome aesthetic
   return new THREE.Box3Helper(box, new THREE.Color(0x5a5a5a));
 }
 
 /**
- * Update point cloud visualization with current wave function data
- * @param {Float32Array} psiRe - Real part of wave function
- * @param {Float32Array} psiIm - Imaginary part of wave function
- * @param {THREE.BufferAttribute} ampAttr - Amplitude attribute
- * @param {THREE.BufferAttribute} phaseAttr - Phase attribute
- * @param {Object} maxDRef - Reference to maximum density tracker
- * @param {number} densityScale - Density scaling factor
- * @param {boolean} showPhase - Whether to update phase data
+ * update point cloud visualisation with current wave function data
+ * @param {Float32Array} psiRe - real part of wave function
+ * @param {Float32Array} psiIm - imaginary part of wave function
+ * @param {THREE.BufferAttribute} ampAttr - amplitude attribute
+ * @param {THREE.BufferAttribute} phaseAttr - phase attribute
+ * @param {Object} maxDRef - reference to maximum density tracker
+ * @param {number} densityScale - density scaling factor
+ * @param {boolean} showPhase - whether to update phase data
  */
 export function updatePointCloud(psiRe, psiIm, ampAttr, phaseAttr, maxDRef, densityScale, showPhase) {
   const amps = ampAttr.array;
@@ -169,11 +169,11 @@ export function updatePointCloud(psiRe, psiIm, ampAttr, phaseAttr, maxDRef, dens
 }
 
 /**
- * Handle window resize events
- * @param {THREE.WebGLRenderer} renderer - Three.js renderer
- * @param {THREE.PerspectiveCamera} camera - Three.js camera
- * @param {HTMLElement} mountElement - Mount element
- * @param {THREE.Points} points - Points object for shader uniform updates
+ * handle window resize events
+ * @param {THREE.WebGLRenderer} renderer - three.js renderer
+ * @param {THREE.PerspectiveCamera} camera - three.js camera
+ * @param {HTMLElement} mountElement - mount element
+ * @param {THREE.Points} points - points object for shader uniform updates
  */
 export function handleResize(renderer, camera, mountElement, points) {
   if (!mountElement || !renderer || !camera) return;
@@ -194,7 +194,7 @@ export function handleResize(renderer, camera, mountElement, points) {
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   
-  // Update shader uniforms for point sizing
+  // update shader uniforms for point sizing
   if (points) {
     const material = points.material;
     const dpr = (renderer.getPixelRatio && renderer.getPixelRatio()) || 
@@ -209,11 +209,11 @@ export function handleResize(renderer, camera, mountElement, points) {
 }
 
 /**
- * Render the scene once
- * @param {THREE.WebGLRenderer} renderer - Three.js renderer
- * @param {THREE.Scene} scene - Three.js scene
- * @param {THREE.PerspectiveCamera} camera - Three.js camera
- * @param {OrbitControls} controls - Orbit controls
+ * render the scene once
+ * @param {THREE.WebGLRenderer} renderer - three.js renderer
+ * @param {THREE.Scene} scene - three.js scene
+ * @param {THREE.PerspectiveCamera} camera - three.js camera
+ * @param {OrbitControls} controls - orbit controls
  */
 export function renderScene(renderer, scene, camera, controls) {
   controls?.update();
@@ -223,8 +223,8 @@ export function renderScene(renderer, scene, camera, controls) {
 }
 
 /**
- * Clean up Three.js resources
- * @param {Object} threeRefs - Object containing Three.js references
+ * clean up three.js resources
+ * @param {Object} threeRefs - object containing three.js references
  */
 export function disposeThreeJS(threeRefs) {
   const { controls, points, boxHelper, renderer, geometry, material } = threeRefs;
@@ -234,7 +234,7 @@ export function disposeThreeJS(threeRefs) {
   if (points) {
     if (material && material.dispose) material.dispose();
     if (geometry) {
-      // Dispose buffer attributes
+      // dispose buffer attributes
       const attrs = geometry.attributes;
       Object.values(attrs).forEach(attr => {
         if (attr && attr.dispose) attr.dispose();

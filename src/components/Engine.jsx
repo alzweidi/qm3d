@@ -1,8 +1,8 @@
-// Main quantum wave engine component
-// Orchestrates physics simulation, rendering, and user interface
+// main quantum wave engine component
+// orchestrates physics simulation, rendering, and user interface
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import Controls from './Controls.jsx';
+import Controls from './controls.jsx';
 import { runFFTSelfTests } from '../physics/fft.js';
 import { 
   presetFree, 
@@ -22,17 +22,17 @@ import {
   renormalize
 } from '../physics/quantum.js';
 import {
-  initializeThreeJS,
+  initialiseThreeJS,
   createQuantumPointCloud,
   createBoundingBox,
   updatePointCloud,
   handleResize,
   renderScene,
   disposeThreeJS
-} from '../rendering/visualization.js';
+} from '../rendering/visualisation.js';
 
 export default function QuantumWaveEngine() {
-  // Simulation parameters
+  // simulation parameters
   const [N, setN] = useState(32);
   const [L, setL] = useState(10);
   const dx = useMemo(() => L / N, [L, N]);
@@ -41,11 +41,11 @@ export default function QuantumWaveEngine() {
   const cellVol = useMemo(() => Math.pow(L / N, 3), [L, N]);
   const [stepsPerFrame, setStepsPerFrame] = useState(1);
 
-  // Absorbing boundaries
+  // absorbing boundaries
   const [absorbFrac, setAbsorbFrac] = useState(0.15);
   const [absorbStrength, setAbsorbStrength] = useState(3.0);
 
-  // Wave packet parameters
+  // wave packet parameters
   const [sigma, setSigma] = useState(0.6);
   const [k0x, setK0x] = useState(8.0);
   const [k0y, setK0y] = useState(0.0);
@@ -55,17 +55,17 @@ export default function QuantumWaveEngine() {
   const [y0, setY0] = useState(0);
   const [z0, setZ0] = useState(0);
 
-  // Visualization
+  // visualisation
   const [densityScale, setDensityScale] = useState(1.2);
   const [showPhase, setShowPhase] = useState(true);
   const [running, setRunning] = useState(true);
 
-  // Refs for DOM and Three.js
+  // refs for dom and three.js
   const mountRef = useRef(null);
   const threeRefs = useRef({});
   const maxDRef = useRef(1e-9);
 
-  // Physics arrays
+  // physics arrays
   const size = useMemo(() => N * N * N, [N]);
   const psiRe = useRef(new Float32Array(size));
   const psiIm = useRef(new Float32Array(size));
@@ -74,7 +74,7 @@ export default function QuantumWaveEngine() {
   const expVh = useRef(new Float32Array(2 * size));
   const capS2Ref = useRef(new Float32Array(size));
 
-  // Scratch arrays for computations
+  // scratch arrays for computations
   const gXRef = useRef(new Float32Array(N));
   const gYRef = useRef(new Float32Array(N));
   const gZRef = useRef(new Float32Array(N));
@@ -84,11 +84,11 @@ export default function QuantumWaveEngine() {
   const scratchRe = useRef(new Float32Array(N));
   const scratchIm = useRef(new Float32Array(N));
 
-  // Coordinate and k-space arrays
+  // coordinate and k-space arrays
   const coord = useMemo(() => createCoordinateArray(N, L), [N, L]);
   const kArrays = useMemo(() => createKSpaceArrays(N, L), [N, L]);
 
-  // Initialize arrays when N or L changes
+  // initialise arrays when n or l changes
   useEffect(() => {
     const newSize = N * N * N;
     psiRe.current = new Float32Array(newSize);
@@ -111,11 +111,11 @@ export default function QuantumWaveEngine() {
     psiIm.current.fill(0);
     maxDRef.current = 1e-9;
 
-    initializeVisualization();
+    initialiseVisualisation();
     rebuildPotentialExponentials();
   }, [N, L]);
 
-  // Clamp packet center positions to domain
+  // clamp packet center positions to domain
   useEffect(() => {
     const clamp = (v) => Math.max(-L/2, Math.min(L/2, v));
     setX0(x => clamp(x));
@@ -123,18 +123,18 @@ export default function QuantumWaveEngine() {
     setZ0(z => clamp(z));
   }, [L]);
 
-  // Update absorbing boundaries
+  // update absorbing boundaries
   useEffect(() => {
     capS2Ref.current = createAbsorbingBoundary(N, absorbFrac);
     rebuildPotentialExponentials();
   }, [N, absorbFrac]);
 
-  // Update kinetic exponentials
+  // update kinetic exponentials
   useEffect(() => {
     buildKineticExponentials(expK.current, kArrays, N, dt);
   }, [N, L, dt, kArrays]);
 
-  // Update potential exponentials
+  // update potential exponentials
   useEffect(() => {
     rebuildPotentialExponentials();
   }, [dt, N, absorbStrength, absorbFrac]);
@@ -149,10 +149,10 @@ export default function QuantumWaveEngine() {
     );
   }
 
-  function initializeVisualization() {
+  function initialiseVisualisation() {
     disposeThreeJS(threeRefs.current);
     
-    const threeObjects = initializeThreeJS(mountRef.current, L);
+    const threeObjects = initialiseThreeJS(mountRef.current, L);
     const pointCloudObjects = createQuantumPointCloud(
       coord, N, threeObjects.maxPointSize, showPhase
     );
@@ -180,17 +180,17 @@ export default function QuantumWaveEngine() {
     renderScene(renderer, scene, camera, controls);
   }
 
-  // Update visualization when showPhase changes
+  // update visualisation when showPhase changes
   useEffect(() => {
     const { points } = threeRefs.current;
     if (points && points.material && points.material.uniforms && points.material.uniforms.uShowPhase) {
       points.material.uniforms.uShowPhase.value = showPhase ? 1.0 : 0.0;
     }
-    updateVisualization();
+    updateVisualisation();
     renderOnce();
   }, [showPhase]);
 
-  // Handle window resize
+  // handle window resize
   useEffect(() => {
     const onWindowResize = () => {
       const { renderer, camera, points } = threeRefs.current;
@@ -210,7 +210,7 @@ export default function QuantumWaveEngine() {
     };
   }, []);
 
-  function updateVisualization() {
+  function updateVisualisation() {
     const { ampAttr, phaseAttr } = threeRefs.current;
     if (ampAttr && phaseAttr) {
       updatePointCloud(
@@ -225,7 +225,7 @@ export default function QuantumWaveEngine() {
     }
   }
 
-  // Animation loop
+  // animation loop
   useEffect(() => {
     let raf = 0;
 
@@ -250,7 +250,7 @@ export default function QuantumWaveEngine() {
             scratchIm.current
           );
         }
-        updateVisualization();
+        updateVisualisation();
         renderOnce();
         raf = requestAnimationFrame(tick);
       }
@@ -292,7 +292,7 @@ export default function QuantumWaveEngine() {
     };
   }, [running, stepsPerFrame, dt, densityScale, showPhase]);
 
-  // Potential preset functions
+  // potential preset functions
   function handlePresetFree() {
     presetFree(V.current);
     rebuildPotentialExponentials();
@@ -335,7 +335,7 @@ export default function QuantumWaveEngine() {
       pYRef.current,
       pZRef.current
     );
-    updateVisualization();
+    updateVisualisation();
     renderOnce();
   }
 
@@ -343,11 +343,11 @@ export default function QuantumWaveEngine() {
     psiRe.current.fill(0);
     psiIm.current.fill(0);
     maxDRef.current = 1e-9;
-    updateVisualization();
+    updateVisualisation();
     renderOnce();
   }
 
-  // Run self-tests on mount
+  // run self-tests on mount
   useEffect(() => {
     runFFTSelfTests();
   }, []);

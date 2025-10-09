@@ -1,11 +1,11 @@
-// Shader definitions for quantum wave visualization
-// Vertex and fragment shaders for point cloud rendering with phase coloring
+// shader definitions for quantum wave visualisation
+// vertex and fragment shaders for point cloud rendering with phase colouring
 
 import * as THREE from "three";
 
 /**
- * Vertex shader for quantum wave point cloud
- * Handles amplitude-based sizing and position transformation
+ * vertex shader for quantum wave point cloud
+ * handles amplitude-based sizing and position transformation
  */
 export const vertexShader = `
   attribute float aAmp;
@@ -27,8 +27,8 @@ export const vertexShader = `
 `;
 
 /**
- * Fragment shader for quantum wave point cloud
- * Renders circular sprites with HSL phase coloring
+ * fragment shader for quantum wave point cloud
+ * renders circular sprites with HSL phase colouring
  */
 export const fragmentShader = `
   #ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -41,7 +41,7 @@ export const fragmentShader = `
   varying float vPhase;
   uniform float uShowPhase;
 
-  // Helper for HSL→RGB (pulled out to avoid nested function errors in WebGL1)
+  // helper for HSL→RGB (pulled out to avoid nested function errors in WebGL1)
   float hsl_f(float n, float h, float a, float l) {
     float k = mod(n + h*12.0, 12.0);
     return l - a * max(-1.0, min(min(k - 3.0, 9.0 - k), 1.0));
@@ -61,7 +61,7 @@ export const fragmentShader = `
     
     float a = smoothstep(0.5, 0.0, r);
     
-    // Map phase [-π,π] → hue [0,1] (or fixed hue when disabled)
+    // map phase [-π,π] → hue [0,1] (or fixed hue when disabled)
     float hue = (uShowPhase > 0.5) ? 
       ((vPhase / 3.14159265358979323846) * 0.5 + 0.5) : 
       0.6;
@@ -72,7 +72,7 @@ export const fragmentShader = `
 `;
 
 /**
- * Shader uniforms configuration
+ * shader uniforms configuration
  */
 export const shaderUniforms = {
   uSizeScale: { value: 120.0 },
@@ -81,10 +81,10 @@ export const shaderUniforms = {
 };
 
 /**
- * Create shader material for quantum wave visualization
- * @param {number} maxPointSize - Maximum point size supported by GPU
- * @param {boolean} showPhase - Whether to show phase coloring
- * @returns {THREE.ShaderMaterial} Configured shader material
+ * create shader material for quantum wave visualisation
+ * @param {number} maxPointSize - maximum point size supported by GPU
+ * @param {boolean} showPhase - whether to show phase colouring
+ * @returns {THREE.ShaderMaterial} configured shader material
  */
 export function createQuantumShaderMaterial(maxPointSize = 64, showPhase = true) {
   return new THREE.ShaderMaterial({

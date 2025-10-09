@@ -1,20 +1,20 @@
-// Potential energy functions for quantum wave simulation
-// Various preset potentials: free space, barriers, wells, harmonic oscillator
+// potential energy functions for quantum wave simulation
+// various preset potentials: free space, barriers, wells, harmonic oscillator
 
 /**
- * Set potential to zero everywhere (free space)
- * @param {Float32Array} V - Potential array to modify
+ * set potential to zero everywhere (free space)
+ * @param {Float32Array} V - potential array to modify
  */
 export function presetFree(V) {
   V.fill(0);
 }
 
 /**
- * Create a plane barrier potential at x > 0
- * @param {Float32Array} V - Potential array to modify
- * @param {Float32Array} coord - Coordinate array
- * @param {number} N - Grid size
- * @param {number} V0 - Barrier height (default: 4)
+ * create a plane barrier potential at x > 0
+ * @param {Float32Array} V - potential array to modify
+ * @param {Float32Array} coord - coordinate array
+ * @param {number} N - grid size
+ * @param {number} V0 - barrier height (default: 4)
  */
 export function presetPlaneBarrier(V, coord, N, V0 = 4) {
   for (let z = 0; z < N; z++) {
@@ -29,12 +29,12 @@ export function presetPlaneBarrier(V, coord, N, V0 = 4) {
 }
 
 /**
- * Create a cubic potential well in the center
- * @param {Float32Array} V - Potential array to modify
- * @param {Float32Array} coord - Coordinate array
- * @param {number} N - Grid size
- * @param {number} L - Domain size
- * @param {number} V0 - Well depth (default: -6)
+ * create a cubic potential well in the center
+ * @param {Float32Array} V - potential array to modify
+ * @param {Float32Array} coord - coordinate array
+ * @param {number} N - grid size
+ * @param {number} L - domain size
+ * @param {number} V0 - well depth (default: -6)
  */
 export function presetBoxWell(V, coord, N, L, V0 = -6) {
   const w = L * 0.4;
@@ -53,12 +53,12 @@ export function presetBoxWell(V, coord, N, L, V0 = -6) {
 }
 
 /**
- * Create a spherical potential well
- * @param {Float32Array} V - Potential array to modify
- * @param {Float32Array} coord - Coordinate array
- * @param {number} N - Grid size
- * @param {number} L - Domain size
- * @param {number} V0 - Well depth (default: -8)
+ * create a spherical potential well
+ * @param {Float32Array} V - potential array to modify
+ * @param {Float32Array} coord - coordinate array
+ * @param {number} N - grid size
+ * @param {number} L - domain size
+ * @param {number} V0 - well depth (default: -8)
  */
 export function presetSphere(V, coord, N, L, V0 = -8) {
   const R = L * 0.25; 
@@ -78,11 +78,11 @@ export function presetSphere(V, coord, N, L, V0 = -8) {
 }
 
 /**
- * Create a 3D harmonic oscillator potential
- * @param {Float32Array} V - Potential array to modify
- * @param {Float32Array} coord - Coordinate array
- * @param {number} N - Grid size
- * @param {number} omega - Oscillator frequency (default: 1)
+ * create a 3d harmonic oscillator potential
+ * @param {Float32Array} V - potential array to modify
+ * @param {Float32Array} coord - coordinate array
+ * @param {number} N - grid size
+ * @param {number} omega - oscillator frequency (default: 1)
  */
 export function presetHarmonic(V, coord, N, omega = 1) {
   for (let z = 0; z < N; z++) {
@@ -100,8 +100,8 @@ export function presetHarmonic(V, coord, N, omega = 1) {
 }
 
 /**
- * Get all available potential presets
- * @returns {Object} Map of preset names to functions
+ * get all available potential presets
+ * @returns {Object} map of preset names to functions
  */
 export const POTENTIAL_PRESETS = {
   free: presetFree,
