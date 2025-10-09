@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { lin, fillRandomPair, rmsRelativeErrorComplex as rmsRel } from '../utils/testUtils.js';
 import {
   createCoordinateArray,
   createKSpaceArrays,
@@ -13,9 +14,7 @@ import {
   calculateNorm,
 } from '../../src/physics/quantum.js';
 
-function lin(x, y, z, N) {
-  return x + N * (y + N * z);
-}
+// lin moved to tests/utils/testUtils.js
 
 describe('quantum.js', () => {
   it('createCoordinateArray produces centered cell coordinates', () => {
@@ -135,10 +134,7 @@ describe('quantum.js', () => {
     const size = N * N * N;
     const psiRe = new Float32Array(size);
     const psiIm = new Float32Array(size);
-    for (let i = 0; i < size; i++) {
-      psiRe[i] = Math.random() * 2 - 1;
-      psiIm[i] = Math.random() * 2 - 1;
-    }
+    fillRandomPair(psiRe, psiIm);
     const kArrays = createKSpaceArrays(N, L);
     const expK = new Float32Array(2 * size);
     buildKineticExponentials(expK, kArrays, N, 0.02);
@@ -160,10 +156,7 @@ describe('quantum.js', () => {
     // initial random psi
     const psiReA = new Float32Array(size);
     const psiImA = new Float32Array(size);
-    for (let i = 0; i < size; i++) {
-      psiReA[i] = Math.random() * 2 - 1;
-      psiImA[i] = Math.random() * 2 - 1;
-    }
+    fillRandomPair(psiReA, psiImA);
 
     const kArrays = createKSpaceArrays(N, L);
     const expK = new Float32Array(2 * size);
@@ -221,14 +214,7 @@ describe('quantum.js', () => {
     timeStep(psiRe, psiIm, expVh, expK, N, sRe, sIm);
 
     // FFT round-trips introduce tiny numeric noise; assert small RMS relative error
-    let num = 0, den = 0;
-    for (let i = 0; i < size; i++) {
-      const dr = psiRe[i] - r0[i];
-      const di = psiIm[i] - i0[i];
-      num += dr * dr + di * di;
-      den += r0[i] * r0[i] + i0[i] * i0[i];
-    }
-    const rel = Math.sqrt(num / Math.max(den, 1e-30));
+    const rel = rmsRel(psiRe, psiIm, r0, i0);
     expect(rel).toBeLessThan(1e-7);
   });
 
