@@ -192,9 +192,9 @@ export function fft1d_p(re, im, inverse, plan) {
  * @param {boolean} inverse - whether to perform inverse fft
  * @param {Float32Array} lineRe - scratch array for 1d transforms
  * @param {Float32Array} lineIm - scratch array for 1d transforms
- * @param {Object} plan - optional fft plan for optimization
+ * @param {Object} [plan] - optional fft plan for optimization (unused)
  */
-export function fft3d(re, im, N, inverse, lineRe, lineIm, plan) {
+export function fft3d(re, im, N, inverse, lineRe, lineIm) {
     const idx = (x, y, z) => x + N * (y + N * z);
 
     // transform along x direction

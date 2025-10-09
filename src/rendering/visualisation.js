@@ -248,12 +248,12 @@ export function disposeThreeJS(threeRefs) {
       if (boxHelper.geometry && boxHelper.geometry.dispose) {
         boxHelper.geometry.dispose();
       }
-    } catch(_) {}
+    } catch(_) { /* no-op: defensive cleanup */ }
     try { 
       if (boxHelper.material && boxHelper.material.dispose) {
         boxHelper.material.dispose();
       }
-    } catch(_) {}
+    } catch(_) { /* no-op: defensive cleanup */ }
   }
   
   if (renderer) {

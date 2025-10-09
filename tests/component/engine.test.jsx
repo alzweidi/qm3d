@@ -7,7 +7,7 @@ import { render, screen, fireEvent, within, waitFor } from '@testing-library/rea
 vi.mock('../../src/rendering/visualisation.js', () => {
   const updatePointCloud = vi.fn();
   let lastPointCloud = null;
-  function initialiseThreeJS(mountElement, L) {
+  function initialiseThreeJS() {
     // minimal stubs
     const renderer = {
       setPixelRatio: vi.fn(),
@@ -24,7 +24,7 @@ vi.mock('../../src/rendering/visualisation.js', () => {
     return { scene, camera, renderer, controls, maxPointSize: 64 };
   }
 
-  function createQuantumPointCloud(coord, N, maxPointSize, showPhase) {
+  function createQuantumPointCloud(_coord, N, maxPointSize, showPhase) {
     const size = N * N * N;
     const ampAttr = { array: new Float32Array(size), needsUpdate: false };
     const phaseAttr = { array: new Float32Array(size), needsUpdate: false };
@@ -35,7 +35,7 @@ vi.mock('../../src/rendering/visualisation.js', () => {
     return { points, geometry, material, ampAttr, phaseAttr };
   }
 
-  function createBoundingBox(L) { return { geometry: { dispose: vi.fn() }, material: { dispose: vi.fn() } }; }
+  function createBoundingBox() { return { geometry: { dispose: vi.fn() }, material: { dispose: vi.fn() } }; }
   function handleResize() {}
   function renderScene() {}
   function disposeThreeJS() {}
@@ -74,14 +74,12 @@ describe('QuantumWaveEngine (mocked visualisation)', () => {
     const cloud = Vis.__getLastPointCloud();
     expect(cloud.material.uniforms.uShowPhase.value).toBe(1);
 
-    // Toggle checkbox via Controls (scope to Controls card and match the label with '=')
+    // Toggle checkbox via Controls (scope to Controls card) using role selector
     const controlsHeading = screen.getByRole('heading', { name: /controls/i });
     const controlsCard = controlsHeading.closest('.card');
     expect(controlsCard).toBeTruthy();
-    const { getByText } = within(controlsCard);
-    const phaseLabelNode = getByText(/^\s*phase hue\s*=/i);
-    const row = phaseLabelNode.closest('div');
-    const checkbox = row?.nextElementSibling?.querySelector('input[type="checkbox"]');
+    const { getByRole } = within(controlsCard);
+    const checkbox = getByRole('checkbox');
     expect(checkbox).toBeTruthy();
     fireEvent.click(checkbox);
 

@@ -13,26 +13,8 @@ import {
   calculateNorm,
 } from '../../src/physics/quantum.js';
 
-// helpers
-function idx(x, y, z, N) {
-  return y + N * (x + N * z); // CAREFUL: check implementation order
-}
-// in fft3d the index helper is idx(x, y, z) => x + N*(y + N*z)
-// for physics arrays in quantum.js, linearisation uses yOff + x within loops with z as outer:
-// id = z*N*N + y*N + x  => id = x + N*(y + N*z) which matches fft.js helper.
 function lin(x, y, z, N) {
   return x + N * (y + N * z);
-}
-
-function rmsRelativeError(a, b) {
-  let num = 0;
-  let den = 0;
-  for (let i = 0; i < a.length; i++) {
-    const d = a[i] - b[i];
-    num += d * d;
-    den += b[i] * b[i];
-  }
-  return Math.sqrt(num / Math.max(den, 1e-30));
 }
 
 describe('quantum.js', () => {

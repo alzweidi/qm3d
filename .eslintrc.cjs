@@ -14,12 +14,11 @@ module.exports = {
     sourceType: 'module',
     ecmaFeatures: { jsx: true },
   },
-  plugins: ['react', 'react-hooks', 'react-refresh'],
+  plugins: ['react', 'react-hooks'],
   extends: [
     'eslint:recommended',
     'plugin:react/recommended',
     'plugin:react-hooks/recommended',
-    'plugin:react-refresh/recommended',
   ],
   rules: {
     // using the new JSX transform, React in scope is not required
