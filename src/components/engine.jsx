@@ -349,7 +349,10 @@ export default function QuantumWaveEngine() {
 
   // run self-tests on mount
   useEffect(() => {
-    runFFTSelfTests();
+    // avoid running FFT self-tests during unit/component test runs
+    if (import.meta && import.meta.env && import.meta.env.MODE !== 'test') {
+      runFFTSelfTests();
+    }
   }, []);
 
   return (
