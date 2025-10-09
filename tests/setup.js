@@ -5,15 +5,15 @@ import { expect } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import { afterEach } from 'vitest';
 
-// Make Math.random deterministic across test runs
+// make Math.random deterministic across test runs
 seedrandom('qm3d-fixed-seed', { global: true });
 
-// Ensure DOM is cleaned between tests (robustness across environments)
+// ensure DOM is cleaned between tests (robustness across environments)
 afterEach(() => {
   cleanup();
 });
 
-// Custom matcher: compare arrays element-wise with precision (digits)
+// custom matcher: compare arrays element-wise with precision (digits)
 expect.extend({
   toEqualCloseTo(received, expected, precision = 6) {
     const rec = Array.from(received);

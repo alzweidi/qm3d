@@ -13,12 +13,12 @@ import {
   calculateNorm,
 } from '../../src/physics/quantum.js';
 
-// Helpers
+// helpers
 function idx(x, y, z, N) {
   return y + N * (x + N * z); // CAREFUL: check implementation order
 }
-// In fft3d the index helper is idx(x, y, z) => x + N*(y + N*z)
-// For physics arrays in quantum.js, linearization uses yOff + x within loops with z as outer:
+// in fft3d the index helper is idx(x, y, z) => x + N*(y + N*z)
+// for physics arrays in quantum.js, linearisation uses yOff + x within loops with z as outer:
 // id = z*N*N + y*N + x  => id = x + N*(y + N*z) which matches fft.js helper.
 function lin(x, y, z, N) {
   return x + N * (y + N * z);
@@ -45,7 +45,7 @@ describe('quantum.js', () => {
     const N = 8;
     const L = 2 * Math.PI;
     const { kx2, ky2, kz2 } = createKSpaceArrays(N, L);
-    // Expected frequencies: [0,1,2,3,-4,-3,-2,-1]
+    // expected frequencies: [0,1,2,3,-4,-3,-2,-1]
     const expectedSq = [0,1,4,9,16,9,4,1];
     expect(Array.from(kx2)).toEqualCloseTo(expectedSq, 10);
     expect(Array.from(ky2)).toEqualCloseTo(expectedSq, 10);
@@ -73,21 +73,21 @@ describe('quantum.js', () => {
     const N = 2;
     const size = N * N * N; // 8
     const V = new Float32Array(size);
-    // V: [0,1,-2, 0,0,0, 0,0] to test different angles
+    // v: [0,1,-2, 0,0,0, 0,0] to test different angles
     V[0] = 0; V[1] = 1; V[2] = -2;
     const dt = 0.1;
     const absorbStrength = 3.0;
     const expVh = new Float32Array(2 * size);
 
-    // Case 1: no CAP
+    // case 1: no CAP
     buildPotentialExponentials(expVh, V, null, dt, absorbStrength);
     let theta = -0.5 * V[1] * dt;
     let j = (1 << 1);
-    // Float32 rounding on expVh components
+    // float32 rounding on expVh components
     expect(expVh[j]).toBeCloseTo(Math.cos(theta), 7);
     expect(expVh[j + 1]).toBeCloseTo(Math.sin(theta), 7);
 
-    // Case 2: with CAP
+    // case 2: with CAP
     const capS2 = new Float32Array(size);
     capS2[2] = 2.0; // non-zero cap only at index 2
     buildPotentialExponentials(expVh, V, capS2, dt, absorbStrength);
@@ -95,10 +95,10 @@ describe('quantum.js', () => {
     const decay = Math.exp(-0.5 * absorbStrength * capS2[2] * dt);
     j = (2 << 1);
     const mag = Math.hypot(expVh[j], expVh[j + 1]);
-    // Use relative tolerance suitable for Float32 computations
+    // use relative tolerance suitable for Float32 computations
     const rel = Math.abs(mag - decay) / Math.max(decay, 1e-12);
     expect(rel).toBeLessThan(1e-7);
-    // Angle still follows theta
+    // angle still follows theta
     const ang = Math.atan2(expVh[j + 1], expVh[j]);
     expect(ang).toBeCloseTo(theta, 7); // allow some wrap/precision tolerance
   });
@@ -113,7 +113,7 @@ describe('quantum.js', () => {
     const edgeIndex = lin(0, 4, 4, N);
     expect(cap[edgeIndex]).toBeGreaterThan(0);
 
-    // Symmetry checks
+    // symmetry checks
     const x = 1, y = 2, z = 3;
     const a = cap[lin(x, y, z, N)];
     const ax = cap[lin(N - 1 - x, y, z, N)];
@@ -133,12 +133,12 @@ describe('quantum.js', () => {
       Math.cos(-Math.PI / 2), Math.sin(-Math.PI / 2)
     ]);
     potentialHalfStep(psiRe, psiIm, expVh);
-    // After multiply: index 0 stays (1,0); index 1 rotates by -π/2
+    // after multiply: index 0 stays (1,0); index 1 rotates by -π/2
     expect(psiRe[0]).toBeCloseTo(1, 12);
     expect(psiIm[0]).toBeCloseTo(0, 12);
     // (0.5 - i) * (0 - i) = (-1) * 0.5 + ... compute explicitly
-    // Let (a+ib)*(c+id) with c=0, d=-1 => real = a*c - b*d = 0 - (-1)*(-1)???
-    // Better compute numerically from initial
+    // let (a+ib)*(c+id) with c=0, d=-1 => real = a*c - b*d = 0 - (-1)*(-1)???
+    // better compute numerically from initial
     const a = 0.5, b = -1;
     const c = 0, d = -1;
     const nr = a * c - b * d; // 0 - (-1)*(-1) = -1
@@ -175,7 +175,7 @@ describe('quantum.js', () => {
     const L = 10;
     const size = N * N * N;
 
-    // Initial random psi
+    // initial random psi
     const psiReA = new Float32Array(size);
     const psiImA = new Float32Array(size);
     for (let i = 0; i < size; i++) {
@@ -187,7 +187,7 @@ describe('quantum.js', () => {
     const expK = new Float32Array(2 * size);
     const expVh = new Float32Array(2 * size);
 
-    // Case 1: V=0, no CAP
+    // case 1: V=0, no CAP
     const V = new Float32Array(size); // zeros
     buildKineticExponentials(expK, kArrays, N, 0.02);
     buildPotentialExponentials(expVh, V, null, 0.02, 0);
@@ -200,7 +200,7 @@ describe('quantum.js', () => {
     const norm1 = calculateNorm(psiReA, psiImA, 1.0);
     expect(Math.abs(norm1 - norm0)).toBeLessThan(1e-6);
 
-    // Case 2: with CAP
+    // case 2: with CAP
     const psiReB = psiReA.slice();
     const psiImB = psiImA.slice();
     const capS2 = createAbsorbingBoundary(N, 0.25);
@@ -275,13 +275,13 @@ describe('quantum.js', () => {
       gX, gY, gZ, pX, pY, pZ
     );
 
-    // Find argmax index
+    // find argmax index
     let maxV = -Infinity, maxI = -1;
     for (let i = 0; i < size; i++) {
       const v = psiRe[i] * psiRe[i] + psiIm[i] * psiIm[i];
       if (v > maxV) { maxV = v; maxI = i; }
     }
-    // Decode x,y,z
+    // decode x,y,z
     const x = maxI % N;
     const y = Math.floor(maxI / N) % N;
     const z = Math.floor(maxI / (N * N));
@@ -290,7 +290,7 @@ describe('quantum.js', () => {
     expect(centers).toContain(y);
     expect(centers).toContain(z);
 
-    // Linearity: second add with scale=2 doubles amplitudes
+    // linearity: second add with scale=2 doubles amplitudes
     const psiRe2 = psiRe.slice();
     const psiIm2 = psiIm.slice();
     addPacket3D(
@@ -304,12 +304,12 @@ describe('quantum.js', () => {
     let ratioOK = true;
     for (let i = 0; i < size; i++) {
       if (psiRe[i] !== 0 || psiIm[i] !== 0) {
-        // Expect the increment to be double
+        // expect the increment to be double
         const dRe = psiRe2[i] - psiRe[i];
         const dIm = psiIm2[i] - psiIm[i];
         const r = Math.hypot(dRe, dIm);
         const base = Math.hypot(psiRe[i], psiIm[i]);
-        // Because first packet + second packet => total amplitude is base + 2*base at center, but
+        // because first packet + second packet => total amplitude is base + 2*base at center, but
         // comparing increment to base is approximately 2 when phases are same (k=0).
         if (base > 0) {
           const factor = r / base;
@@ -338,7 +338,7 @@ describe('quantum.js', () => {
     const norm = calculateNorm(psiRe, psiIm, cellVol);
     expect(Math.abs(norm - 1)).toBeLessThan(1e-6);
 
-    // Zero state
+    // zero state
     const zRe = new Float32Array(size);
     const zIm = new Float32Array(size);
     renormalize(zRe, zIm, cellVol);
