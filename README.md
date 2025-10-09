@@ -23,6 +23,12 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173) in your browser.
 
+Or
+
+Visit the site
+
+<https://qm3d.netlify.app/>
+
 ## Usage & docs
 
 - See the Usage Guide: [usage.md](./usage.md)
