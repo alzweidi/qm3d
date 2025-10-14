@@ -2,6 +2,7 @@
 // handles all user interface elements and parameter management
 
 import React from 'react';
+import PropTypes from 'prop-types';
 
 /**
  * reusable control component with label and input
@@ -12,6 +13,11 @@ const Control = ({ label, children }) => (
     <div className="flex-1">{children}</div>
   </div>
 );
+
+Control.propTypes = {
+  label: PropTypes.string.isRequired,
+  children: PropTypes.node.isRequired,
+};
 
 /**
  * main controls panel component
@@ -327,3 +333,44 @@ export default function Controls({
     </div>
   );
 }
+
+Controls.propTypes = {
+  // simulation parameters
+  N: PropTypes.number.isRequired,
+  setN: PropTypes.func.isRequired,
+  L: PropTypes.number.isRequired,
+  setL: PropTypes.func.isRequired,
+  dtScale: PropTypes.number.isRequired,
+  setDtScale: PropTypes.func.isRequired,
+  dt: PropTypes.number.isRequired,
+  stepsPerFrame: PropTypes.number.isRequired,
+  setStepsPerFrame: PropTypes.func.isRequired,
+
+  // absorbing boundaries
+  absorbFrac: PropTypes.number.isRequired,
+  setAbsorbFrac: PropTypes.func.isRequired,
+  absorbStrength: PropTypes.number.isRequired,
+  setAbsorbStrength: PropTypes.func.isRequired,
+
+  // wave packet parameters
+  sigma: PropTypes.number.isRequired,
+  setSigma: PropTypes.func.isRequired,
+  k0x: PropTypes.number.isRequired,
+  setK0x: PropTypes.func.isRequired,
+  k0y: PropTypes.number.isRequired,
+  setK0y: PropTypes.func.isRequired,
+  k0z: PropTypes.number.isRequired,
+  setK0z: PropTypes.func.isRequired,
+  amp: PropTypes.number.isRequired,
+  setAmp: PropTypes.func.isRequired,
+  x0: PropTypes.number.isRequired,
+  setX0: PropTypes.func.isRequired,
+  y0: PropTypes.number.isRequired,
+  setY0: PropTypes.func.isRequired,
+  z0: PropTypes.number.isRequired,
+  setZ0: PropTypes.func.isRequired,
+
+  // visualisation
+  densityScale: PropTypes.number.isRequired,
+  setDensityScale: PropTypes.func.isRequired,
+};
