@@ -213,7 +213,13 @@ export function timeStep(psiRe, psiIm, expVh, expK, N, scratchRe, scratchIm) {
  * @param {Float32Array} pY - scratch array for y phase
  * @param {Float32Array} pZ - scratch array for z phase
  */
-export function addPacket3D(psiRe, psiIm, coord, N, cx, cy, cz, sx, sy, sz, kx, ky, kz, scale, gX, gY, gZ, pX, pY, pZ) {
+export function addPacket3D(...args) {
+  let psiRe, psiIm, coord, N, cx, cy, cz, sx, sy, sz, kx, ky, kz, scale, gX, gY, gZ, pX, pY, pZ;
+  if (args.length === 1 && args[0] && typeof args[0] === 'object' && ('psiRe' in args[0])) {
+    ({ psiRe, psiIm, coord, N, cx, cy, cz, sx, sy, sz, kx, ky, kz, scale = 1.0, gX, gY, gZ, pX, pY, pZ } = args[0]);
+  } else {
+    [psiRe, psiIm, coord, N, cx, cy, cz, sx, sy, sz, kx, ky, kz, scale, gX, gY, gZ, pX, pY, pZ] = args;
+  }
   const s2x = sx*sx, s2y = sy*sy, s2z = sz*sz;
   
   // compute 1D gaussians and phases
