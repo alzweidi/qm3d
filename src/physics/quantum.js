@@ -216,7 +216,7 @@ export function timeStep(psiRe, psiIm, expVh, expK, N, scratchRe, scratchIm) {
 export function addPacket3D(...args) {
   let psiRe, psiIm, coord, N, cx, cy, cz, sx, sy, sz, kx, ky, kz, scale, gX, gY, gZ, pX, pY, pZ;
   if (args.length === 1 && args[0] && typeof args[0] === 'object' && ('psiRe' in args[0])) {
-    ({ psiRe, psiIm, coord, N, cx, cy, cz, sx, sy, sz, kx, ky, kz, scale = 1.0, gX, gY, gZ, pX, pY, pZ } = args[0]);
+    ({ psiRe, psiIm, coord, N, cx, cy, cz, sx, sy, sz, kx, ky, kz, scale = 1, gX, gY, gZ, pX, pY, pZ } = args[0]);
   } else {
     [psiRe, psiIm, coord, N, cx, cy, cz, sx, sy, sz, kx, ky, kz, scale, gX, gY, gZ, pX, pY, pZ] = args;
   }
