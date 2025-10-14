@@ -41,14 +41,14 @@ export default function QuantumWaveEngine() {
 
   // absorbing boundaries
   const [absorbFrac, setAbsorbFrac] = useState(0.15);
-  const [absorbStrength, setAbsorbStrength] = useState(3.0);
+  const [absorbStrength, setAbsorbStrength] = useState(3);
 
   // wave packet parameters
   const [sigma, setSigma] = useState(0.6);
-  const [k0x, setK0x] = useState(8.0);
-  const [k0y, setK0y] = useState(0.0);
-  const [k0z, setK0z] = useState(0.0);
-  const [amp, setAmp] = useState(1.0);
+  const [k0x, setK0x] = useState(8);
+  const [k0y, setK0y] = useState(0);
+  const [k0z, setK0z] = useState(0);
+  const [amp, setAmp] = useState(1);
   const [x0, setX0] = useState(-L / 4);
   const [y0, setY0] = useState(0);
   const [z0, setZ0] = useState(0);
@@ -202,7 +202,7 @@ export default function QuantumWaveEngine() {
   useEffect(() => {
     const uShow = threeRefs.current?.points?.material?.uniforms?.uShowPhase;
     if (uShow) {
-      uShow.value = showPhase ? 1.0 : 0.0;
+      uShow.value = showPhase ? 1 : 0;
     }
     updateVisualisation();
     renderOnce();
@@ -216,14 +216,10 @@ export default function QuantumWaveEngine() {
       renderOnce();
     };
 
-    if (typeof window !== 'undefined') {
-      window.addEventListener('resize', onWindowResize);
-    }
+    globalThis.window?.addEventListener('resize', onWindowResize);
 
     return () => {
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('resize', onWindowResize);
-      }
+      globalThis.window?.removeEventListener('resize', onWindowResize);
       disposeThreeJS(threeRefs.current);
     };
   }, [renderOnce]);
