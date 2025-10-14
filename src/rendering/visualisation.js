@@ -27,8 +27,7 @@ export function initialiseThreeJS(mountElement, L) {
   // create renderer
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
   const dpr = Math.min(
-    (typeof window !== 'undefined' && window.devicePixelRatio) ? 
-    window.devicePixelRatio : 1, 
+    globalThis.window?.devicePixelRatio ?? 1,
     2
   );
   renderer.setPixelRatio(dpr);
@@ -154,10 +153,10 @@ export function updatePointCloud(psiRe, psiIm, ampAttr, phaseAttr, maxDRef, dens
     
     if (dens > runningMax) runningMax = dens;
     
-    const amp = dens > eps ? Math.sqrt(dens) * invNorm : 0.0;
+    const amp = dens > eps ? Math.sqrt(dens) * invNorm : 0;
     amps[i] = amp;
     
-    if (showPhase && amp > 0.0) {
+    if (showPhase && amp > 0) {
       phasesArr[i] = Math.atan2(pi, pr);
     }
   }
@@ -181,8 +180,7 @@ export function handleResize(renderer, camera, mountElement, points) {
   const w = mountElement.clientWidth;
   const h = mountElement.clientHeight || 480;
   const ndpr = Math.min(
-    (typeof window !== 'undefined' && window.devicePixelRatio) ? 
-    window.devicePixelRatio : 1, 
+    globalThis.window?.devicePixelRatio ?? 1,
     2
   );
   
@@ -198,13 +196,11 @@ export function handleResize(renderer, camera, mountElement, points) {
   // update shader uniforms for point sizing
   if (points) {
     const material = points.material;
-    const dpr = renderer.getPixelRatio?.() || 
-      ((typeof window !== 'undefined' && window.devicePixelRatio) ? 
-       window.devicePixelRatio : 1);
+    const dpr = renderer.getPixelRatio?.() ?? globalThis.window?.devicePixelRatio ?? 1;
     const fovTan = Math.tan((camera.fov * Math.PI/180) * 0.5);
 
     if (material?.uniforms?.uSizeScale) {
-      material.uniforms.uSizeScale.value = (dpr / Math.max(1e-4, fovTan)) * 100.0;
+      material.uniforms.uSizeScale.value = (dpr / Math.max(1e-4, fovTan)) * 100;
     }
   }
 }
@@ -233,9 +229,9 @@ function disposeBufferAttributes(geometry) {
   if (!geometry) return;
   const attrs = geometry.attributes;
   if (attrs) {
-    Object.values(attrs).forEach(attr => {
+    for (const attr of Object.values(attrs)) {
       if (attr && typeof attr.dispose === 'function') attr.dispose();
-    });
+    }
   }
   if (typeof geometry.dispose === 'function') geometry.dispose();
 }
@@ -248,12 +244,8 @@ function disposePointsResources(points, geometry, material) {
 
 function disposeBoxHelper(boxHelper) {
   if (!boxHelper) return;
-  try {
-    boxHelper.geometry?.dispose?.();
-  } catch(_) { /* no-op: defensive cleanup */ }
-  try {
-    boxHelper.material?.dispose?.();
-  } catch(_) { /* no-op: defensive cleanup */ }
+  boxHelper.geometry?.dispose?.();
+  boxHelper.material?.dispose?.();
 }
 
 /**
