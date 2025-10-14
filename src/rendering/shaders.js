@@ -75,8 +75,8 @@ export const fragmentShader = `
  * shader uniforms configuration
  */
 export const shaderUniforms = {
-  uSizeScale: { value: 120.0 },
-  uShowPhase: { value: 1.0 },
+  uSizeScale: { value: 120 },
+  uShowPhase: { value: 1 },
   uMaxPointSize: { value: 64 }
 };
 
@@ -94,8 +94,8 @@ export function createQuantumShaderMaterial(maxPointSize = 64, showPhase = true)
     blending: THREE.AdditiveBlending,
     vertexColors: false,
     uniforms: {
-      uSizeScale: { value: 120.0 },
-      uShowPhase: { value: showPhase ? 1.0 : 0.0 },
+      uSizeScale: { value: 120 },
+      uShowPhase: { value: showPhase ? 1 : 0 },
       uMaxPointSize: { value: maxPointSize }
     },
     vertexShader,
