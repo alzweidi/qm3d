@@ -40,9 +40,9 @@ export function initialiseThreeJS(mountElement, L) {
 
   // get GPU capabilities
   const gl = renderer.getContext();
-  const range = gl && gl.getParameter ? 
+  const range = gl?.getParameter ?
     gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE) : [1, 64];
-  const maxPointSize = Array.isArray(range) || (range && range.length) ? 
+  const maxPointSize = Array.isArray(range) && range.length > 1 ?
     range[1] : 64;
 
   // create orbit controls
@@ -186,7 +186,8 @@ export function handleResize(renderer, camera, mountElement, points) {
     2
   );
   
-  if (renderer.getPixelRatio && renderer.getPixelRatio() !== ndpr) {
+  const currentDpr = renderer.getPixelRatio?.();
+  if (currentDpr !== undefined && currentDpr !== ndpr) {
     renderer.setPixelRatio(ndpr);
   }
   
@@ -197,12 +198,12 @@ export function handleResize(renderer, camera, mountElement, points) {
   // update shader uniforms for point sizing
   if (points) {
     const material = points.material;
-    const dpr = (renderer.getPixelRatio && renderer.getPixelRatio()) || 
+    const dpr = renderer.getPixelRatio?.() || 
       ((typeof window !== 'undefined' && window.devicePixelRatio) ? 
        window.devicePixelRatio : 1);
     const fovTan = Math.tan((camera.fov * Math.PI/180) * 0.5);
-    
-    if (material.uniforms && material.uniforms.uSizeScale) {
+
+    if (material?.uniforms?.uSizeScale) {
       material.uniforms.uSizeScale.value = (dpr / Math.max(1e-4, fovTan)) * 100.0;
     }
   }
@@ -248,14 +249,10 @@ function disposePointsResources(points, geometry, material) {
 function disposeBoxHelper(boxHelper) {
   if (!boxHelper) return;
   try {
-    if (boxHelper.geometry && boxHelper.geometry.dispose) {
-      boxHelper.geometry.dispose();
-    }
+    boxHelper.geometry?.dispose?.();
   } catch(_) { /* no-op: defensive cleanup */ }
   try {
-    if (boxHelper.material && boxHelper.material.dispose) {
-      boxHelper.material.dispose();
-    }
+    boxHelper.material?.dispose?.();
   } catch(_) { /* no-op: defensive cleanup */ }
 }
 
