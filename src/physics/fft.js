@@ -153,8 +153,7 @@ export function fft1d_p(re, im, inverse, plan) {
     }
 
     // apply bit-reversal using precomputed pairs
-    for (let t = 0; t < plan.pairs.length; t++) {
-        const a = plan.pairs[t][0], b = plan.pairs[t][1];
+    for (const [a, b] of plan.pairs) {
         const tr = re[a], ti = im[a];
         re[a] = re[b];
         im[a] = im[b];
@@ -163,8 +162,7 @@ export function fft1d_p(re, im, inverse, plan) {
     }
 
     // apply stages using precomputed twiddle factors
-    for (let s = 0; s < plan.stages.length; s++) {
-        const st = plan.stages[s];
+    for (const st of plan.stages) {
         const wlen_r = inverse ? st.wlen_r_i : st.wlen_r_f;
         const wlen_i = inverse ? st.wlen_i_i : st.wlen_i_f;
         const len = st.len, half = st.half;
@@ -305,7 +303,7 @@ export function runFFTSelfTests() {
         console.assert(Math.abs(cm[0] + 5) < 1e-6 && Math.abs(cm[1] - 10) < 1e-6, "cMul incorrect");
 
         // test complex exponential
-        const dtt = 0.01, Vc = 2.0;
+        const dtt = 0.01, Vc = 2;
         const eh = cExp(-0.5 * dtt * Vc);
         console.assert(Math.abs(eh[0] * eh[0] + eh[1] * eh[1] - 1) < 1e-6, "exp phase not unit magnitude");
 
