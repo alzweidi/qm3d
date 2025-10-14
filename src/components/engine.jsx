@@ -37,7 +37,6 @@ export default function QuantumWaveEngine() {
   const dx = useMemo(() => L / N, [L, N]);
   const [dtScale, setDtScale] = useState(0.08);
   const dt = dtScale * dx * dx;
-  // const cellVol = useMemo(() => Math.pow(L / N, 3), [L, N]); // not used in the engine component
   const [stepsPerFrame, setStepsPerFrame] = useState(1);
 
   // absorbing boundaries
@@ -201,9 +200,9 @@ export default function QuantumWaveEngine() {
 
   // update visualisation when showPhase changes
   useEffect(() => {
-    const { points } = threeRefs.current;
-    if (points && points.material && points.material.uniforms && points.material.uniforms.uShowPhase) {
-      points.material.uniforms.uShowPhase.value = showPhase ? 1.0 : 0.0;
+    const uShow = threeRefs.current?.points?.material?.uniforms?.uShowPhase;
+    if (uShow) {
+      uShow.value = showPhase ? 1.0 : 0.0;
     }
     updateVisualisation();
     renderOnce();
@@ -266,9 +265,7 @@ export default function QuantumWaveEngine() {
     };
 
     const { controls } = threeRefs.current;
-    if (controls && controls.addEventListener) {
-      controls.addEventListener('change', onControlsChange);
-    }
+    controls?.addEventListener?.('change', onControlsChange);
 
     const onVis = () => {
       if (typeof document !== 'undefined' && !document.hidden && running && !raf) {
@@ -288,9 +285,7 @@ export default function QuantumWaveEngine() {
 
     return () => {
       cancelAnimationFrame(raf);
-      if (controls && controls.removeEventListener) {
-        controls.removeEventListener('change', onControlsChange);
-      }
+      controls?.removeEventListener?.('change', onControlsChange);
       if (typeof document !== 'undefined') {
         document.removeEventListener('visibilitychange', onVis);
       }
@@ -355,7 +350,7 @@ export default function QuantumWaveEngine() {
   // run self-tests on mount
   useEffect(() => {
     // avoid running FFT self-tests during unit/component test runs
-    if (import.meta && import.meta.env && import.meta.env.MODE !== 'test') {
+    if (import.meta?.env?.MODE !== 'test') {
       runFFTSelfTests();
     }
   }, []);
