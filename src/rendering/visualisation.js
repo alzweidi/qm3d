@@ -222,41 +222,52 @@ export function renderScene(renderer, scene, camera, controls) {
   }
 }
 
+function safeDispose(obj) {
+  if (obj && typeof obj.dispose === 'function') {
+    obj.dispose();
+  }
+}
+
+function disposeBufferAttributes(geometry) {
+  if (!geometry) return;
+  const attrs = geometry.attributes;
+  if (attrs) {
+    Object.values(attrs).forEach(attr => {
+      if (attr && typeof attr.dispose === 'function') attr.dispose();
+    });
+  }
+  if (typeof geometry.dispose === 'function') geometry.dispose();
+}
+
+function disposePointsResources(points, geometry, material) {
+  if (!points) return;
+  safeDispose(material);
+  disposeBufferAttributes(geometry);
+}
+
+function disposeBoxHelper(boxHelper) {
+  if (!boxHelper) return;
+  try {
+    if (boxHelper.geometry && boxHelper.geometry.dispose) {
+      boxHelper.geometry.dispose();
+    }
+  } catch(_) { /* no-op: defensive cleanup */ }
+  try {
+    if (boxHelper.material && boxHelper.material.dispose) {
+      boxHelper.material.dispose();
+    }
+  } catch(_) { /* no-op: defensive cleanup */ }
+}
+
 /**
  * clean up three.js resources
  * @param {Object} threeRefs - object containing three.js references
  */
 export function disposeThreeJS(threeRefs) {
   const { controls, points, boxHelper, renderer, geometry, material } = threeRefs;
-  
-  if (controls) controls.dispose();
-  
-  if (points) {
-    if (material && material.dispose) material.dispose();
-    if (geometry) {
-      // dispose buffer attributes
-      const attrs = geometry.attributes;
-      Object.values(attrs).forEach(attr => {
-        if (attr && attr.dispose) attr.dispose();
-      });
-      geometry.dispose();
-    }
-  }
-  
-  if (boxHelper) {
-    try { 
-      if (boxHelper.geometry && boxHelper.geometry.dispose) {
-        boxHelper.geometry.dispose();
-      }
-    } catch(_) { /* no-op: defensive cleanup */ }
-    try { 
-      if (boxHelper.material && boxHelper.material.dispose) {
-        boxHelper.material.dispose();
-      }
-    } catch(_) { /* no-op: defensive cleanup */ }
-  }
-  
-  if (renderer) {
-    renderer.dispose();
-  }
+
+  safeDispose(controls);
+  disposePointsResources(points, geometry, material);
+  disposeBoxHelper(boxHelper);
+  safeDispose(renderer);
 }
