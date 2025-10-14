@@ -18,17 +18,12 @@ export const cMul = (ar, ai, br, bi) => [ar * br - ai * bi, ar * bi + ai * br];
  */
 export const cExp = (theta) => [Math.cos(theta), Math.sin(theta)];
 
-/**
- * 1D Fast Fourier Transform using Cooley-Tukey algorithm
- * @param {Float32Array} re - real part array (modified in place)
- * @param {Float32Array} im - imaginary part array (modified in place)
- * @param {boolean} inverse - whether to perform inverse FFT
- */
-export function fft1d(re, im, inverse = false) {
-    const n = re.length;
+function ensurePowerOfTwo(n) {
     if ((n & (n - 1)) !== 0) throw new Error('fft1d requires power‑of‑two length');
+}
 
-    // bit-reversal permutation
+function bitReversePermutationInPlace(re, im) {
+    const n = re.length;
     let j = 0;
     for (let i = 0; i < n; i++) {
         if (i < j) {
@@ -46,41 +41,61 @@ export function fft1d(re, im, inverse = false) {
         }
         j += m;
     }
+}
 
-    // cooley-tukey fft
+function processBlocks(re, im, n, len, wlen_r, wlen_i) {
+    for (let i = 0; i < n; i += len) {
+        let wr = 1, wi = 0;
+        const half = len >> 1;
+
+        for (let k = 0; k < half; k++) {
+            const a = i + k, b = a + half;
+            const u_r = re[a], u_i = im[a];
+            const v_r = re[b] * wr - im[b] * wi;
+            const v_i = re[b] * wi + im[b] * wr;
+
+            re[a] = u_r + v_r;
+            im[a] = u_i + v_i;
+            re[b] = u_r - v_r;
+            im[b] = u_i - v_i;
+
+            const nwr = wr * wlen_r - wi * wlen_i;
+            wi = wr * wlen_i + wi * wlen_r;
+            wr = nwr;
+        }
+    }
+}
+
+function applyStages(re, im, inverse) {
+    const n = re.length;
     for (let len = 2; len <= n; len <<= 1) {
         const ang = (inverse ? +2 * Math.PI : -2 * Math.PI) / len;
         const wlen_r = Math.cos(ang);
         const wlen_i = Math.sin(ang);
-
-        for (let i = 0; i < n; i += len) {
-            let wr = 1, wi = 0;
-            const half = len >> 1;
-
-            for (let k = 0; k < half; k++) {
-                const a = i + k, b = a + half;
-                const u_r = re[a], u_i = im[a];
-                const v_r = re[b] * wr - im[b] * wi;
-                const v_i = re[b] * wi + im[b] * wr;
-
-                re[a] = u_r + v_r;
-                im[a] = u_i + v_i;
-                re[b] = u_r - v_r;
-                im[b] = u_i - v_i;
-
-                const nwr = wr * wlen_r - wi * wlen_i;
-                wi = wr * wlen_i + wi * wlen_r;
-                wr = nwr;
-            }
-        }
+        processBlocks(re, im, n, len, wlen_r, wlen_i);
     }
+}
 
-    // normalise for inverse transform
+function normalizeInverse(re, im) {
+    const n = re.length;
+    for (let i = 0; i < n; i++) {
+        re[i] /= n;
+        im[i] /= n;
+    }
+}
+
+/**
+ * 1D fast fourier transform using Cooley-Tukey algorithm
+ * @param {Float32Array} re - real part array (modified in place)
+ * @param {Float32Array} im - imaginary part array (modified in place)
+ * @param {boolean} inverse - whether to perform inverse FFT
+ */
+export function fft1d(re, im, inverse = false) {
+    ensurePowerOfTwo(re.length);
+    bitReversePermutationInPlace(re, im);
+    applyStages(re, im, inverse);
     if (inverse) {
-        for (let i = 0; i < n; i++) {
-            re[i] /= n;
-            im[i] /= n;
-        }
+        normalizeInverse(re, im);
     }
 }
 
@@ -183,21 +198,8 @@ export function fft1d_p(re, im, inverse, plan) {
     }
 }
 
-/**
- * 3d fast fourier transform
- * applies 1d fft along each dimension sequentially
- * @param {Float32Array} re - real part array (N³ elements)
- * @param {Float32Array} im - imaginary part array (N³ elements)
- * @param {number} N - grid size (N×N×N)
- * @param {boolean} inverse - whether to perform inverse fft
- * @param {Float32Array} lineRe - scratch array for 1d transforms
- * @param {Float32Array} lineIm - scratch array for 1d transforms
- * @param {Object} [plan] - optional fft plan for optimization (unused)
- */
-export function fft3d(re, im, N, inverse, lineRe, lineIm) {
+function transformX(re, im, N, inverse, lineRe, lineIm) {
     const idx = (x, y, z) => x + N * (y + N * z);
-
-    // transform along x direction
     for (let z = 0; z < N; z++) {
         for (let y = 0; y < N; y++) {
             for (let x = 0; x < N; x++) {
@@ -213,8 +215,10 @@ export function fft3d(re, im, N, inverse, lineRe, lineIm) {
             }
         }
     }
+}
 
-    // transform along y direction
+function transformY(re, im, N, inverse, lineRe, lineIm) {
+    const idx = (x, y, z) => x + N * (y + N * z);
     for (let z = 0; z < N; z++) {
         for (let x = 0; x < N; x++) {
             for (let y = 0; y < N; y++) {
@@ -230,8 +234,10 @@ export function fft3d(re, im, N, inverse, lineRe, lineIm) {
             }
         }
     }
+}
 
-    // transform along z direction
+function transformZ(re, im, N, inverse, lineRe, lineIm) {
+    const idx = (x, y, z) => x + N * (y + N * z);
     for (let y = 0; y < N; y++) {
         for (let x = 0; x < N; x++) {
             for (let z = 0; z < N; z++) {
@@ -247,6 +253,23 @@ export function fft3d(re, im, N, inverse, lineRe, lineIm) {
             }
         }
     }
+}
+
+/**
+ * 3d fast fourier transform
+ * applies 1d fft along each dimension sequentially
+ * @param {Float32Array} re - real part array (N³ elements)
+ * @param {Float32Array} im - imaginary part array (N³ elements)
+ * @param {number} N - grid size (N×N×N)
+ * @param {boolean} inverse - whether to perform inverse fft
+ * @param {Float32Array} lineRe - scratch array for 1d transforms
+ * @param {Float32Array} lineIm - scratch array for 1d transforms
+ * @param {Object} [plan] - optional fft plan for optimization (unused)
+ */
+export function fft3d(re, im, N, inverse, lineRe, lineIm) {
+    transformX(re, im, N, inverse, lineRe, lineIm);
+    transformY(re, im, N, inverse, lineRe, lineIm);
+    transformZ(re, im, N, inverse, lineRe, lineIm);
 }
 
 /**
