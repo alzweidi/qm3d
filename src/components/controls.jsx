@@ -204,7 +204,7 @@ export default function Controls({
         <input 
           type="range" 
           min={0.5} 
-          max={2.0} 
+          max={2} 
           step={0.1} 
           value={amp} 
           onChange={e => setAmp(Number.parseFloat(e.target.value))} 
@@ -250,7 +250,7 @@ export default function Controls({
         <input 
           type="range" 
           min={0.4} 
-          max={2.0} 
+          max={2} 
           step={0.05} 
           value={densityScale} 
           onChange={e => setDensityScale(Number.parseFloat(e.target.value))} 
