@@ -70,7 +70,7 @@ export default function Controls({
           max={64} 
           step={32} 
           value={N} 
-          onChange={e => setN(parseInt(e.target.value))} 
+          onChange={e => setN(Number.parseInt(e.target.value, 10))} 
           className="w-full"
         />
       </Control>
@@ -82,7 +82,7 @@ export default function Controls({
           max={16} 
           step={0.5} 
           value={L} 
-          onChange={e => setL(parseFloat(e.target.value))} 
+          onChange={e => setL(Number.parseFloat(e.target.value))} 
           className="w-full"
         />
       </Control>
@@ -94,7 +94,7 @@ export default function Controls({
           max={0.15} 
           step={0.001} 
           value={dtScale} 
-          onChange={e => setDtScale(parseFloat(e.target.value))} 
+          onChange={e => setDtScale(Number.parseFloat(e.target.value))} 
           className="w-full"
         />
       </Control>
@@ -106,7 +106,7 @@ export default function Controls({
           max={4} 
           step={1} 
           value={stepsPerFrame} 
-          onChange={e => setStepsPerFrame(parseInt(e.target.value))} 
+          onChange={e => setStepsPerFrame(Number.parseInt(e.target.value, 10))} 
           className="w-full"
         />
       </Control>
@@ -123,7 +123,7 @@ export default function Controls({
           max={1.5} 
           step={0.05} 
           value={sigma} 
-          onChange={e => setSigma(parseFloat(e.target.value))} 
+          onChange={e => setSigma(Number.parseFloat(e.target.value))} 
           className="w-full"
         />
       </Control>
@@ -135,7 +135,7 @@ export default function Controls({
           max={L/2} 
           step={0.1} 
           value={x0} 
-          onChange={e => setX0(parseFloat(e.target.value))} 
+          onChange={e => setX0(Number.parseFloat(e.target.value))} 
           className="w-full"
         />
       </Control>
@@ -147,7 +147,7 @@ export default function Controls({
           max={L/2} 
           step={0.1} 
           value={y0} 
-          onChange={e => setY0(parseFloat(e.target.value))} 
+          onChange={e => setY0(Number.parseFloat(e.target.value))} 
           className="w-full"
         />
       </Control>
@@ -159,7 +159,7 @@ export default function Controls({
           max={L/2} 
           step={0.1} 
           value={z0} 
-          onChange={e => setZ0(parseFloat(e.target.value))} 
+          onChange={e => setZ0(Number.parseFloat(e.target.value))} 
           className="w-full"
         />
       </Control>
@@ -171,7 +171,7 @@ export default function Controls({
           max={20} 
           step={0.5} 
           value={k0x} 
-          onChange={e => setK0x(parseFloat(e.target.value))} 
+          onChange={e => setK0x(Number.parseFloat(e.target.value))} 
           className="w-full"
         />
       </Control>
@@ -183,7 +183,7 @@ export default function Controls({
           max={20} 
           step={0.5} 
           value={k0y} 
-          onChange={e => setK0y(parseFloat(e.target.value))} 
+          onChange={e => setK0y(Number.parseFloat(e.target.value))} 
           className="w-full"
         />
       </Control>
@@ -195,7 +195,7 @@ export default function Controls({
           max={20} 
           step={0.5} 
           value={k0z} 
-          onChange={e => setK0z(parseFloat(e.target.value))} 
+          onChange={e => setK0z(Number.parseFloat(e.target.value))} 
           className="w-full"
         />
       </Control>
@@ -207,7 +207,7 @@ export default function Controls({
           max={2.0} 
           step={0.1} 
           value={amp} 
-          onChange={e => setAmp(parseFloat(e.target.value))} 
+          onChange={e => setAmp(Number.parseFloat(e.target.value))} 
           className="w-full"
         />
       </Control>
@@ -224,7 +224,7 @@ export default function Controls({
           max={0.3} 
           step={0.01} 
           value={absorbFrac} 
-          onChange={e => setAbsorbFrac(parseFloat(e.target.value))} 
+          onChange={e => setAbsorbFrac(Number.parseFloat(e.target.value))} 
           className="w-full"
         />
       </Control>
@@ -236,7 +236,7 @@ export default function Controls({
           max={8} 
           step={0.1} 
           value={absorbStrength} 
-          onChange={e => setAbsorbStrength(parseFloat(e.target.value))} 
+          onChange={e => setAbsorbStrength(Number.parseFloat(e.target.value))} 
           className="w-full"
         />
       </Control>
@@ -253,7 +253,7 @@ export default function Controls({
           max={2.0} 
           step={0.05} 
           value={densityScale} 
-          onChange={e => setDensityScale(parseFloat(e.target.value))} 
+          onChange={e => setDensityScale(Number.parseFloat(e.target.value))} 
           className="w-full"
         />
       </Control>
@@ -373,4 +373,17 @@ Controls.propTypes = {
   // visualisation
   densityScale: PropTypes.number.isRequired,
   setDensityScale: PropTypes.func.isRequired,
+  showPhase: PropTypes.bool.isRequired,
+  setShowPhase: PropTypes.func.isRequired,
+
+  // control actions
+  running: PropTypes.bool.isRequired,
+  setRunning: PropTypes.func.isRequired,
+  onAddPacket: PropTypes.func.isRequired,
+  onResetPsi: PropTypes.func.isRequired,
+  onPresetFree: PropTypes.func.isRequired,
+  onPresetPlaneBarrier: PropTypes.func.isRequired,
+  onPresetBoxWell: PropTypes.func.isRequired,
+  onPresetSphere: PropTypes.func.isRequired,
+  onPresetHarmonic: PropTypes.func.isRequired,
 };
