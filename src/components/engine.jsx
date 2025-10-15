@@ -46,7 +46,13 @@ export default function QuantumWaveEngine() {
 
   // wave packet parameters
   const [sigma, setSigma] = useState(0.6);
-  const [k0x, setK0x] = useState(8);
+  const targetPPW = 8;
+  const kDefault = useMemo(() => {
+    const kMaxSafe = Math.PI / dx * 0.6;
+    const kPpw = (2 * Math.PI) / (targetPPW * dx);
+    return Math.min(kMaxSafe, kPpw);
+  }, [dx]);
+  const [k0x, setK0x] = useState(kDefault);
   const [k0y, setK0y] = useState(0);
   const [k0z, setK0z] = useState(0);
   const [amp, setAmp] = useState(1);
@@ -141,7 +147,7 @@ export default function QuantumWaveEngine() {
   // update potential exponentials
   useEffect(() => {
     rebuildPotentialExponentials();
-  }, [dt, N, absorbStrength, absorbFrac, rebuildPotentialExponentials]);
+  }, [dt, absorbStrength, rebuildPotentialExponentials]);
 
   // initialise arrays when n or l changes
   useEffect(() => {
@@ -184,6 +190,13 @@ export default function QuantumWaveEngine() {
     setK0z(k => clamp(k));
   }, [kMax]);
 
+  const prevKDefaultRef = useRef(kDefault);
+  useEffect(() => {
+    const eps = 1e-6;
+    setK0x(v => (Math.abs(v - prevKDefaultRef.current) < eps ? kDefault : v));
+    prevKDefaultRef.current = kDefault;
+  }, [kDefault]);
+
   // update absorbing boundaries
   useEffect(() => {
     capS2Ref.current = createAbsorbingBoundary(N, absorbFrac);
@@ -194,11 +207,6 @@ export default function QuantumWaveEngine() {
   useEffect(() => {
     buildKineticExponentials(expK.current, kArrays, N, dt);
   }, [N, L, dt, kArrays]);
-
-  // update potential exponentials
-  useEffect(() => {
-    rebuildPotentialExponentials();
-  }, [dt, N, absorbStrength, absorbFrac, rebuildPotentialExponentials]);
 
   const renderOnce = useCallback(() => {
     const { renderer, scene, camera, controls } = threeRefs.current;
