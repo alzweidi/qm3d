@@ -206,6 +206,13 @@ export default function QuantumWaveEngine() {
     renderScene(renderer, scene, camera, controls);
   }, []);
 
+  const renderDirect = useCallback(() => {
+    const { renderer, scene, camera } = threeRefs.current;
+    if (renderer && scene && camera) {
+      renderer.render(scene, camera);
+    }
+  }, []);
+
   // update visualisation when showPhase changes
   useEffect(() => {
     const uShow = threeRefs.current?.points?.material?.uniforms?.uShowPhase;
@@ -265,7 +272,7 @@ export default function QuantumWaveEngine() {
     };
 
     const onControlsChange = () => {
-      if (!running) renderOnce();
+      if (!running) renderDirect();
     };
 
     const { controls } = threeRefs.current;
@@ -294,7 +301,7 @@ export default function QuantumWaveEngine() {
         document.removeEventListener('visibilitychange', onVis);
       }
     };
-  }, [running, stepsPerFrame, dt, densityScale, showPhase, N, updateVisualisation, renderOnce]);
+  }, [running, stepsPerFrame, dt, densityScale, showPhase, N, updateVisualisation, renderOnce, renderDirect]);
 
   // potential preset functions
   function handlePresetFree() {
