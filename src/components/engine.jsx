@@ -167,8 +167,7 @@ export default function QuantumWaveEngine() {
     maxDRef.current = 1e-9;
 
     initialiseVisualisation();
-    rebuildPotentialExponentials();
-  }, [N, L, initialiseVisualisation, rebuildPotentialExponentials]);
+  }, [N, L, initialiseVisualisation]);
 
   // clamp packet center positions to domain
   useEffect(() => {
