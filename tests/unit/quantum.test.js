@@ -23,6 +23,58 @@ describe('quantum.js', () => {
     expect(Array.from(arr)).toEqualCloseTo([-0.75, -0.25, 0.25, 0.75], 10);
   });
 
+  it('renormalize after addPacket keeps norm ≈ 1 over time with CAP off', () => {
+    const N = 16;
+    const L = 8;
+    const dx = L / N;
+    const cellVol = dx * dx * dx;
+    const coord = createCoordinateArray(N, L);
+
+    const size = N * N * N;
+    const psiRe = new Float32Array(size);
+    const psiIm = new Float32Array(size);
+
+    const gX = new Float32Array(N);
+    const gY = new Float32Array(N);
+    const gZ = new Float32Array(N);
+    const pX = new Float32Array(N);
+    const pY = new Float32Array(N);
+    const pZ = new Float32Array(N);
+
+    const sigma = 0.6;
+    const kx = (2 * Math.PI) / (8 * dx); // ~8 ppw
+
+    addPacket3D(
+      psiRe, psiIm, coord, N,
+      0, 0, 0,
+      sigma, sigma, sigma,
+      kx, 0, 0,
+      1.0,
+      gX, gY, gZ, pX, pY, pZ
+    );
+
+    renormalize(psiRe, psiIm, cellVol);
+    const norm0 = calculateNorm(psiRe, psiIm, cellVol);
+    expect(norm0).toBeCloseTo(1.0, 6);
+
+    const kArrays = createKSpaceArrays(N, L);
+    const expK = new Float32Array(2 * size);
+    const expVh = new Float32Array(2 * size);
+    const cap = createAbsorbingBoundary(N, 0); // CAP off
+    const dt = 0.02 * dx * dx;
+
+    buildKineticExponentials(expK, kArrays, N, dt);
+    buildPotentialExponentials(expVh, new Float32Array(size), cap, dt, 0.0);
+
+    const sRe = new Float32Array(N);
+    const sIm = new Float32Array(N);
+    for (let i = 0; i < 200; i++) {
+      timeStep(psiRe, psiIm, expVh, expK, N, sRe, sIm);
+    }
+    const normT = calculateNorm(psiRe, psiIm, cellVol);
+    expect(normT).toBeCloseTo(1.0, 4);
+  });
+
   it('super-Nyquist kx aliases to DC bin in FFT (motivates UI clamp)', () => {
     const N = 32;
     const L = 10;

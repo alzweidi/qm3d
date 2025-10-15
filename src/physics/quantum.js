@@ -85,9 +85,10 @@ export function buildPotentialExponentials(expVh, V, capS2, dt, absorbStrength) 
   const half = -0.5 * dt;
   const len = V.length;
   
+  const useCap = !!capS2 && absorbStrength > 0;
   for (let i = 0; i < len; i++) {
     const theta = half * V[i];
-    const decay = Math.exp(-0.5 * absorbStrength * (capS2 ? capS2[i] : 0) * dt);
+    const decay = useCap ? Math.exp(-0.5 * absorbStrength * capS2[i] * dt) : 1;
     const cr = Math.cos(theta) * decay; 
     const ci = Math.sin(theta) * decay;
     const j = i << 1; 
@@ -105,6 +106,7 @@ export function buildPotentialExponentials(expVh, V, capS2, dt, absorbStrength) 
 export function createAbsorbingBoundary(N, absorbFrac) {
   const cap = new Float32Array(N*N*N);
   const nAbs = Math.floor(absorbFrac * N);
+  if (nAbs <= 0) return cap;
   
   for (let z = 0; z < N; z++) {
     const zOff = N*N*z;

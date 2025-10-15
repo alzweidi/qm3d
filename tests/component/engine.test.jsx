@@ -88,6 +88,25 @@ describe('QuantumWaveEngine (mocked visualisation)', () => {
     await waitFor(() => expect(cloud.material.uniforms.uShowPhase.value).toBe(0));
   });
 
+  it('default k0x ensures >=8 points-per-wavelength for defaults', async () => {
+    const spy = vi.spyOn(Quantum, 'addPacket3D');
+    render(<QuantumWaveEngine />);
+
+    await waitFor(() => expect(Vis.__getLastPointCloud()).toBeTruthy());
+
+    const mainCard = document.querySelector('.lg\\:col-span-2.card.p-4');
+    const utils = within(mainCard);
+    fireEvent.click(utils.getByText(/add packet/i));
+
+    await waitFor(() => expect(spy).toHaveBeenCalled());
+    const call = spy.mock.calls.at(-1);
+    const kxArg = call[10];
+    const N = 32, L = 10;
+    const dx = L / N;
+    const ppw = (2 * Math.PI / Math.max(1e-12, Math.abs(kxArg))) / dx;
+    expect(ppw).toBeGreaterThanOrEqual(7.9);
+  });
+
   it('add packet triggers updatePointCloud', async () => {
     Vis.updatePointCloud.mockClear();
     render(<QuantumWaveEngine />);
