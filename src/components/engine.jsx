@@ -19,6 +19,7 @@ import {
   createAbsorbingBoundary,
   timeStep,
   addPacket3D,
+  renormalize,
 } from '../physics/quantum.js';
 import {
   initialiseThreeJS,
@@ -357,6 +358,8 @@ export default function QuantumWaveEngine() {
       pYRef.current,
       pZRef.current
     );
+    const cellVol = dx * dx * dx;
+    renormalize(psiRe.current, psiIm.current, cellVol);
     updateVisualisation();
     renderOnce();
   }
