@@ -28,6 +28,7 @@ export default function Controls({
   L, setL,
   dtScale, setDtScale,
   dt,
+  kMax,
   stepsPerFrame, setStepsPerFrame,
   
   // absorbing boundaries
@@ -167,11 +168,15 @@ export default function Controls({
       <Control label={`k0x = ${k0x.toFixed(1)}`}>
         <input 
           type="range" 
-          min={-20} 
-          max={20} 
+          min={-kMax} 
+          max={kMax} 
           step={0.5} 
           value={k0x} 
-          onChange={e => setK0x(Number.parseFloat(e.target.value))} 
+          onChange={e => {
+            const v = Number.parseFloat(e.target.value);
+            const cl = Math.max(-kMax, Math.min(kMax, v));
+            setK0x(cl);
+          }} 
           className="w-full"
         />
       </Control>
@@ -179,11 +184,15 @@ export default function Controls({
       <Control label={`k0y = ${k0y.toFixed(1)}`}>
         <input 
           type="range" 
-          min={-20} 
-          max={20} 
+          min={-kMax} 
+          max={kMax} 
           step={0.5} 
           value={k0y} 
-          onChange={e => setK0y(Number.parseFloat(e.target.value))} 
+          onChange={e => {
+            const v = Number.parseFloat(e.target.value);
+            const cl = Math.max(-kMax, Math.min(kMax, v));
+            setK0y(cl);
+          }} 
           className="w-full"
         />
       </Control>
@@ -191,11 +200,15 @@ export default function Controls({
       <Control label={`k0z = ${k0z.toFixed(1)}`}>
         <input 
           type="range" 
-          min={-20} 
-          max={20} 
+          min={-kMax} 
+          max={kMax} 
           step={0.5} 
           value={k0z} 
-          onChange={e => setK0z(Number.parseFloat(e.target.value))} 
+          onChange={e => {
+            const v = Number.parseFloat(e.target.value);
+            const cl = Math.max(-kMax, Math.min(kMax, v));
+            setK0z(cl);
+          }} 
           className="w-full"
         />
       </Control>
@@ -343,6 +356,7 @@ Controls.propTypes = {
   dtScale: PropTypes.number.isRequired,
   setDtScale: PropTypes.func.isRequired,
   dt: PropTypes.number.isRequired,
+  kMax: PropTypes.number.isRequired,
   stepsPerFrame: PropTypes.number.isRequired,
   setStepsPerFrame: PropTypes.func.isRequired,
 

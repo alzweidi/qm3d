@@ -65,6 +65,7 @@ beforeAll(() => {
 
 import QuantumWaveEngine from '../../src/components/engine.jsx';
 import * as Vis from '../../src/rendering/visualisation.js';
+import * as Quantum from '../../src/physics/quantum.js';
 
 describe('QuantumWaveEngine (mocked visualisation)', () => {
   it('toggling phase hue updates shader uniform', async () => {
@@ -100,5 +101,73 @@ describe('QuantumWaveEngine (mocked visualisation)', () => {
     fireEvent.click(utils.getByText(/add packet/i));
 
     expect(Vis.updatePointCloud).toHaveBeenCalled();
+  });
+
+  it('clamps k0 to kMax before addPacket', async () => {
+    const spy = vi.spyOn(Quantum, 'addPacket3D');
+    render(<QuantumWaveEngine />);
+
+    await waitFor(() => expect(Vis.__getLastPointCloud()).toBeTruthy());
+
+    // Find Controls card
+    const controlsHeading = screen.getByRole('heading', { name: /controls/i });
+    const controlsCard = controlsHeading.closest('.card');
+    const withinControls = within(controlsCard);
+
+    // Locate k0x slider and set to a very large value to trigger clamp
+    const k0xLabel = withinControls.getByText(/k0x\s*=/i);
+    const k0xRow = k0xLabel.closest('div');
+    const k0xInput = k0xRow?.nextElementSibling?.querySelector('input[type="range"]');
+    expect(k0xInput).toBeTruthy();
+    // Change to an out-of-range value
+    fireEvent.change(k0xInput, { target: { value: '9999' } });
+
+    // Click the main panel 'add packet'
+    const mainCard = document.querySelector('.lg\\:col-span-2.card.p-4');
+    const utils = within(mainCard);
+    fireEvent.click(utils.getByText(/add packet/i));
+
+    // Assert addPacket3D was called with clamped kx argument
+    await waitFor(() => expect(spy).toHaveBeenCalled());
+    const call = spy.mock.calls.at(-1);
+    // args: [..., sigma,sigma,sigma, kx, ky, kz, ...]
+    const kxArg = call[10];
+    const N = 32, L = 10; // engine defaults
+    const dx = L / N;
+    const kMax = Math.PI / dx * 0.9;
+    expect(Math.abs(kxArg)).toBeLessThanOrEqual(kMax + 1e-12);
+  });
+
+  it('re-clamps k0 when grid spacing increases (L larger)', async () => {
+    const spy = vi.spyOn(Quantum, 'addPacket3D');
+    render(<QuantumWaveEngine />);
+
+    await waitFor(() => expect(Vis.__getLastPointCloud()).toBeTruthy());
+
+    // Increase L via Controls to reduce kMax
+    const controlsHeading = screen.getByRole('heading', { name: /controls/i });
+    const controlsCard = controlsHeading.closest('.card');
+    const { getByText } = within(controlsCard);
+
+    // Find domain slider row by label containing 'domain l'
+    const lLabel = getByText(/domain l/i);
+    const lRow = lLabel.closest('div');
+    const lInput = lRow?.nextElementSibling?.querySelector('input[type="range"]');
+    expect(lInput).toBeTruthy();
+    // Set L to 16 (from min 6 to max 16 per component)
+    fireEvent.change(lInput, { target: { value: '16' } });
+
+    // Now click add packet, engine will clamp again
+    const mainCard = document.querySelector('.lg\\:col-span-2.card.p-4');
+    const utils = within(mainCard);
+    fireEvent.click(utils.getByText(/add packet/i));
+
+    await waitFor(() => expect(spy).toHaveBeenCalled());
+    const call = spy.mock.calls.at(-1);
+    const kxArg = call[10];
+    const N = 32, L = 16;
+    const dx = L / N;
+    const kMax = Math.PI / dx * 0.9; // ~5.6549
+    expect(Math.abs(kxArg)).toBeLessThanOrEqual(kMax + 1e-12);
   });
 });

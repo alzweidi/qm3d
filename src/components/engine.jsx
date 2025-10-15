@@ -37,6 +37,7 @@ export default function QuantumWaveEngine() {
   const dx = useMemo(() => L / N, [L, N]);
   const [dtScale, setDtScale] = useState(0.08);
   const dt = dtScale * dx * dx;
+  const kMax = useMemo(() => Math.PI / dx * 0.9, [dx]);
   const [stepsPerFrame, setStepsPerFrame] = useState(1);
 
   // absorbing boundaries
@@ -177,6 +178,13 @@ export default function QuantumWaveEngine() {
     setZ0(z => clamp(z));
   }, [L]);
 
+  useEffect(() => {
+    const clamp = (v) => Math.max(-kMax, Math.min(kMax, v));
+    setK0x(k => clamp(k));
+    setK0y(k => clamp(k));
+    setK0z(k => clamp(k));
+  }, [kMax]);
+
   // update absorbing boundaries
   useEffect(() => {
     capS2Ref.current = createAbsorbingBoundary(N, absorbFrac);
@@ -315,6 +323,10 @@ export default function QuantumWaveEngine() {
   }
 
   function handleAddPacket() {
+    const clampK = (v) => Math.max(-kMax, Math.min(kMax, v));
+    const kkx = clampK(k0x);
+    const kky = clampK(k0y);
+    const kkz = clampK(k0z);
     addPacket3D(
       psiRe.current,
       psiIm.current,
@@ -322,7 +334,7 @@ export default function QuantumWaveEngine() {
       N,
       x0, y0, z0,
       sigma, sigma, sigma,
-      k0x, k0y, k0z,
+      kkx, kky, kkz,
       amp,
       gXRef.current,
       gYRef.current,
@@ -424,6 +436,7 @@ export default function QuantumWaveEngine() {
           L={L} setL={setL}
           dtScale={dtScale} setDtScale={setDtScale}
           dt={dt}
+          kMax={kMax}
           stepsPerFrame={stepsPerFrame} setStepsPerFrame={setStepsPerFrame}
           absorbFrac={absorbFrac} setAbsorbFrac={setAbsorbFrac}
           absorbStrength={absorbStrength} setAbsorbStrength={setAbsorbStrength}

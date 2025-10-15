@@ -13,6 +13,7 @@ import {
   renormalize,
   calculateNorm,
 } from '../../src/physics/quantum.js';
+import { fft3d } from '../../src/physics/fft.js';
 
 // lin moved to tests/utils/testUtils.js
 
@@ -20,6 +21,55 @@ describe('quantum.js', () => {
   it('createCoordinateArray produces centered cell coordinates', () => {
     const arr = createCoordinateArray(4, 2);
     expect(Array.from(arr)).toEqualCloseTo([-0.75, -0.25, 0.25, 0.75], 10);
+  });
+
+  it('super-Nyquist kx aliases to DC bin in FFT (motivates UI clamp)', () => {
+    const N = 32;
+    const L = 10;
+    const dx = L / N;
+    const coord = createCoordinateArray(N, L);
+
+    const size = N * N * N;
+    const psiRe = new Float32Array(size);
+    const psiIm = new Float32Array(size);
+
+    const { gX, gY, gZ, pX, pY, pZ } = {
+      gX: new Float32Array(N),
+      gY: new Float32Array(N),
+      gZ: new Float32Array(N),
+      pX: new Float32Array(N),
+      pY: new Float32Array(N),
+      pZ: new Float32Array(N),
+    };
+
+    // Set kx to 2π/dx = 2π * N / L, which aliases to m=0 on the discrete grid
+    const kx = 2 * Math.PI / dx;
+    addPacket3D(
+      psiRe, psiIm, coord, N,
+      0, 0, 0,
+      0.6, 0.6, 0.6,
+      kx, 0, 0,
+      1.0,
+      gX, gY, gZ, pX, pY, pZ
+    );
+
+    const sRe = new Float32Array(N);
+    const sIm = new Float32Array(N);
+    fft3d(psiRe, psiIm, N, false, sRe, sIm);
+
+    // Find argmax in spectrum
+    let maxV = -Infinity, maxI = -1;
+    for (let i = 0; i < size; i++) {
+      const v = psiRe[i] * psiRe[i] + psiIm[i] * psiIm[i];
+      if (v > maxV) { maxV = v; maxI = i; }
+    }
+    const x = maxI % N;
+    const y = Math.floor(maxI / N) % N;
+    const z = Math.floor(maxI / (N * N));
+    // Expect DC along all axes due to aliasing
+    expect(x).toBe(0);
+    expect(y).toBe(0);
+    expect(z).toBe(0);
   });
 
   it('createKSpaceArrays maps to integer grid when L=2π', () => {

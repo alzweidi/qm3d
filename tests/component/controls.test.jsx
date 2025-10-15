@@ -11,6 +11,7 @@ function renderControls(overrides = {}) {
     L: 10, setL: vi.fn(),
     dtScale: 0.08, setDtScale: vi.fn(),
     dt: 0.08 * (10/32) * (10/32),
+    kMax: Math.PI / (10/32) * 0.9,
     stepsPerFrame: 1, setStepsPerFrame: vi.fn(),
     // absorbing
     absorbFrac: 0.15, setAbsorbFrac: vi.fn(),
@@ -84,5 +85,31 @@ describe('Controls component', () => {
     expect(input).toBeTruthy();
     fireEvent.change(input, { target: { value: '1.3' } });
     expect(p.setAmp).toHaveBeenCalledWith(1.3);
+  });
+
+  it('k0 sliders use dynamic bounds and clamp to kMax', () => {
+    const N = 32, L = 10;
+    const dx = L / N;
+    const kMax = Math.PI / dx * 0.9;
+    const p = renderControls({ N, L, kMax, k0x: 0 });
+
+    const label = screen.getByText(/k0x\s*=/i);
+    const container = label.closest('div');
+    const wrapper = container?.nextElementSibling;
+    const input = wrapper?.querySelector('input[type="range"]');
+    expect(input).toBeTruthy();
+    // dynamic min/max
+    expect(parseFloat(input.getAttribute('min'))).toBeCloseTo(-kMax, 6);
+    expect(parseFloat(input.getAttribute('max'))).toBeCloseTo(kMax, 6);
+
+    // onChange clamps to kMax
+    fireEvent.change(input, { target: { value: String(kMax * 10) } });
+    const arg1 = p.setK0x.mock.calls.at(-1)[0];
+    expect(arg1).toBeCloseTo(kMax, 12);
+
+    // and to -kMax
+    fireEvent.change(input, { target: { value: String(-kMax * 10) } });
+    const arg2 = p.setK0x.mock.calls.at(-1)[0];
+    expect(arg2).toBeCloseTo(-kMax, 12);
   });
 });
