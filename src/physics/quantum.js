@@ -105,7 +105,9 @@ export function buildPotentialExponentials(expVh, V, capS2, dt, absorbStrength) 
  */
 export function createAbsorbingBoundary(N, absorbFrac) {
   const cap = new Float32Array(N*N*N);
-  const nAbs = Math.floor(absorbFrac * N);
+  let nAbs = Math.floor(absorbFrac * N);
+  nAbs = Math.max(4, nAbs);
+  nAbs = Math.min(nAbs, Math.floor((N - 2) / 2));
   if (nAbs <= 0) return cap;
   
   for (let z = 0; z < N; z++) {
@@ -120,7 +122,7 @@ export function createAbsorbingBoundary(N, absorbFrac) {
       for (let x = 0; x < N; x++) {
         const dxv = Math.max(0, (nAbs - x)/nAbs, (x - (N-1-nAbs))/nAbs);
         const s2 = dxv*dxv + dy2 + dz*dz;
-        cap[yOff + x] = s2;
+        cap[yOff + x] = s2 * s2;
       }
     }
   }
