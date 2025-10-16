@@ -575,5 +575,13 @@ describe('quantum.js', () => {
     const prefMin = simulateWithCap(capMin);
     const prefThin = simulateWithCap(capThin);
     expect(prefMin).toBeLessThan(prefThin);
+  }, 20000);
+
+  it('createAbsorbingBoundary returns zeros when CAP not possible at small N', () => {
+    const N = 3;
+    const cap = createAbsorbingBoundary(N, 0.5);
+    for (let i = 0; i < cap.length; i++) {
+      expect(cap[i]).toBe(0);
+    }
   });
 });
