@@ -472,4 +472,108 @@ describe('quantum.js', () => {
       expect(values[i + 1] + 1e-12).toBeGreaterThanOrEqual(values[i]);
     }
   });
+
+  it('createAbsorbingBoundary enforces minimum width >= 4 for small absorbFrac', () => {
+    const N = 32;
+    const cap = createAbsorbingBoundary(N, 0.05);
+    const y = Math.floor(N / 2);
+    const z = Math.floor(N / 2);
+    let width = 0;
+    for (let x = 0; x < N; x++) {
+      if (cap[lin(x, y, z, N)] > 0) width++; else break;
+    }
+    expect(width).toBeGreaterThanOrEqual(4);
+  });
+
+  it('CAP min-width reduces slab probability versus thin 1-cell CAP', () => {
+    const N = 16;
+    const L = 8;
+    const dx = L / N;
+    const cellVol = dx * dx * dx;
+    const coord = createCoordinateArray(N, L);
+
+    const size = N * N * N;
+    const baseRe = new Float32Array(size);
+    const baseIm = new Float32Array(size);
+
+    const sigma = 0.6;
+    const cx = -L / 4;
+    const kx = (2 * Math.PI) / (8 * dx);
+
+    const gX = new Float32Array(N);
+    const gY = new Float32Array(N);
+    const gZ = new Float32Array(N);
+    const pX = new Float32Array(N);
+    const pY = new Float32Array(N);
+    const pZ = new Float32Array(N);
+
+    addPacket3D(
+      baseRe, baseIm, coord, N,
+      cx, 0, 0,
+      sigma, sigma, sigma,
+      kx, 0, 0,
+      1.0,
+      gX, gY, gZ, pX, pY, pZ
+    );
+    renormalize(baseRe, baseIm, cellVol);
+
+    const kArrays = createKSpaceArrays(N, L);
+    const dt = 0.02 * dx * dx;
+    const expK = new Float32Array(2 * size);
+    buildKineticExponentials(expK, kArrays, N, dt);
+    const V = new Float32Array(size);
+
+    function simulateWithCap(cap) {
+      const psiRe = baseRe.slice();
+      const psiIm = baseIm.slice();
+      const expVh = new Float32Array(2 * size);
+      buildPotentialExponentials(expVh, V, cap, dt, 3.0);
+      const sRe = new Float32Array(N);
+      const sIm = new Float32Array(N);
+      for (let i = 0; i < 900; i++) {
+        timeStep(psiRe, psiIm, expVh, expK, N, sRe, sIm);
+      }
+      const y0 = Math.floor(N / 2);
+      const z0 = Math.floor(N / 2);
+      let capStartX = Math.floor(N / 2);
+      for (let x = Math.floor(N / 2); x < N; x++) {
+        if (cap[lin(x, y0, z0, N)] > 0) { capStartX = x; break; }
+      }
+      const slabX = capStartX - 1;
+      let pref = 0;
+      for (let z = 0; z < N; z++) {
+        for (let y = 0; y < N; y++) {
+          const id = lin(slabX, y, z, N);
+          const pr = psiRe[id], pi = psiIm[id];
+          pref += (pr * pr + pi * pi) * cellVol;
+        }
+      }
+      return pref;
+    }
+
+    const capMin = createAbsorbingBoundary(N, 0.05);
+    const capThin = (() => {
+      const cap = new Float32Array(size);
+      const nAbs = 1;
+      for (let z = 0; z < N; z++) {
+        const zOff = N * N * z;
+        const dz = Math.max(0, (nAbs - z) / nAbs, (z - (N - 1 - nAbs)) / nAbs);
+        for (let y = 0; y < N; y++) {
+          const yOff = zOff + N * y;
+          const dy = Math.max(0, (nAbs - y) / nAbs, (y - (N - 1 - nAbs)) / nAbs);
+          const dy2 = dy * dy;
+          for (let x = 0; x < N; x++) {
+            const dxv = Math.max(0, (nAbs - x) / nAbs, (x - (N - 1 - nAbs)) / nAbs);
+            const s2 = dxv * dxv + dy2 + dz * dz;
+            cap[yOff + x] = s2;
+          }
+        }
+      }
+      return cap;
+    })();
+
+    const prefMin = simulateWithCap(capMin);
+    const prefThin = simulateWithCap(capThin);
+    expect(prefMin).toBeLessThan(prefThin);
+  });
 });
