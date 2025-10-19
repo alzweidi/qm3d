@@ -144,7 +144,7 @@ textbook split‑step method; shout‑out to all the fft giants we stand on. any
 
 ## want to cite?
 
-> “abedalaziz alzweidi, qm3d: a tiny 3d quantum wave engine in the browser (2025), [https://qm3d.netlify.app/](https://qm3d.netlify.app/).”
+> “abedalaziz alzweidi, qm3d: a tiny 3d quantum wave engine in the browser (2025), [https://github.com/alzweidi/qm3d](https://github.com/alzweidi/qm3d).”
 
 ---
 
