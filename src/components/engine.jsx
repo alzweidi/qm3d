@@ -404,7 +404,7 @@ export default function QuantumWaveEngine() {
     const pad = (n) => String(n).padStart(2, '0');
     const filename = `quantum_screenshot_${ts.getFullYear()}${pad(ts.getMonth() + 1)}${pad(ts.getDate())}_${pad(ts.getHours())}${pad(ts.getMinutes())}${pad(ts.getSeconds())}.png`;
     try {
-      await captureScreenshot({ scene, camera, points, width, height, dpr: 1, filename });
+      await captureScreenshot({ scene, camera, points, width, height, dpr: 1, ssaa: 2, filename });
     } catch (e) {
       console.error(e);
     }
@@ -416,7 +416,7 @@ export default function QuantumWaveEngine() {
     if (!scene || !camera) return;
     const { width, height } = getCaptureSize(1920);
     try {
-      const session = startRecording({ scene, camera, points, width, height, dpr: 1, fps: 60 });
+      const session = startRecording({ scene, camera, points, width, height, dpr: 1, fps: 60, ssaa: 2, videoBitsPerSecond: 35000000 });
       recorderRef.current = session;
       setIsRecording(true);
     } catch (e) {

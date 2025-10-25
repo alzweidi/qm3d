@@ -1,7 +1,25 @@
 import * as THREE from "three";
 
 function createOffscreenRenderer(width, height, dpr = 1, preserve = false) {
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, preserveDrawingBuffer: preserve });
+  const renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    alpha: false,
+    preserveDrawingBuffer: preserve,
+    powerPreference: 'high-performance'
+  });
+
+  // color space and tone mapping for consistent output
+  try {
+    if ("outputColorSpace" in renderer && THREE.SRGBColorSpace) {
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+    } else if ("outputEncoding" in renderer && THREE.sRGBEncoding) {
+      renderer.outputEncoding = THREE.sRGBEncoding;
+    }
+    if ("NoToneMapping" in THREE) {
+      renderer.toneMapping = THREE.NoToneMapping;
+    }
+  } catch (e) { void e; }
+
   renderer.setPixelRatio(dpr);
   renderer.setSize(width, height, false);
   return renderer;
@@ -52,9 +70,24 @@ function restoreUniforms(points, prev) {
   if (uniforms.uMaxPointSize && typeof prev.maxSize === 'number') uniforms.uMaxPointSize.value = prev.maxSize;
 }
 
-export async function captureScreenshot({ scene, camera, points, width, height, dpr = 1, filename }) {
+function downscaleCanvas(srcCanvas, outWidth, outHeight) {
+  const dst = document.createElement('canvas');
+  dst.width = outWidth;
+  dst.height = outHeight;
+  const ctx = dst.getContext('2d');
+  if (ctx) {
+    try { ctx.imageSmoothingEnabled = true; } catch (e) { void e; }
+    try { ctx.imageSmoothingQuality = 'high'; } catch (e) { void e; }
+    ctx.drawImage(srcCanvas, 0, 0, outWidth, outHeight);
+  }
+  return dst;
+}
+
+export async function captureScreenshot({ scene, camera, points, width, height, dpr = 1, filename, ssaa = 1 }) {
   if (!scene || !camera) throw new Error('Scene and camera are required');
-  const offscreen = createOffscreenRenderer(width, height, dpr, true);
+  const ssaaFactor = Math.max(1, Math.floor(ssaa));
+  const composedDpr = (dpr || 1) * ssaaFactor;
+  const offscreen = createOffscreenRenderer(width, height, composedDpr, true);
   const camClone = new THREE.PerspectiveCamera();
   syncCameraToSize(camera, camClone, width, height);
   const maxPs = getMaxPointSize(offscreen);
@@ -64,10 +97,11 @@ export async function captureScreenshot({ scene, camera, points, width, height, 
   } finally {
     restoreUniforms(points, prev);
   }
-  const canvas = offscreen.domElement;
+  // downscale to target size when supersampled
+  const outCanvas = composedDpr === 1 ? offscreen.domElement : downscaleCanvas(offscreen.domElement, width, height);
   const blob = await new Promise((resolve, reject) => {
     try {
-      canvas.toBlob((b) => {
+      outCanvas.toBlob((b) => {
         if (b) resolve(b); else reject(new Error('toBlob failed'));
       }, 'image/png');
     } catch (e) {
@@ -100,14 +134,33 @@ function selectMimeType(candidates) {
   return '';
 }
 
-export function startRecording({ scene, camera, points, width, height, dpr = 1, fps = 60, mimeCandidates = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'], videoBitsPerSecond = 25000000 }) {
+export function startRecording({ scene, camera, points, width, height, dpr = 1, fps = 60, mimeCandidates = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'], videoBitsPerSecond = 25000000, ssaa = 1 }) {
   if (!scene || !camera) throw new Error('Scene and camera are required');
   const mimeType = selectMimeType(mimeCandidates);
   if (mimeType === null) throw new Error('MediaRecorder is not available');
   if (mimeType === '') throw new Error('No supported MediaRecorder mime type');
 
-  const offscreen = createOffscreenRenderer(width, height, dpr, false);
-  const stream = offscreen.domElement.captureStream?.(fps);
+  const ssaaFactor = Math.max(1, Math.floor(ssaa));
+  const composedDpr = (dpr || 1) * ssaaFactor;
+  const offscreen = createOffscreenRenderer(width, height, composedDpr, false);
+
+  // when supersampling, draw into a presentation 2D canvas at target size and capture that stream
+  let presentCanvas = null;
+  let presentCtx = null;
+  let stream = null;
+  if (ssaaFactor > 1) {
+    presentCanvas = document.createElement('canvas');
+    presentCanvas.width = width;
+    presentCanvas.height = height;
+    presentCtx = presentCanvas.getContext('2d');
+    if (presentCtx) {
+      try { presentCtx.imageSmoothingEnabled = true; } catch (e) { void e; }
+      try { presentCtx.imageSmoothingQuality = 'high'; } catch (e) { void e; }
+    }
+    stream = presentCanvas.captureStream?.(fps);
+  } else {
+    stream = offscreen.domElement.captureStream?.(fps);
+  }
   if (!stream) {
     offscreen.dispose();
     throw new Error('Canvas captureStream is not available');
@@ -147,7 +200,15 @@ export function startRecording({ scene, camera, points, width, height, dpr = 1, 
     if (!srcScene || !srcCamera) return;
     syncCameraToSize(srcCamera, camClone, width, height);
     const prev = setUniformsForOffscreen(points, offscreen, camClone, maxPs);
-    try { offscreen.render(srcScene, camClone); } finally { restoreUniforms(points, prev); }
+    try {
+      offscreen.render(srcScene, camClone);
+      if (presentCtx && presentCanvas) {
+        presentCtx.clearRect(0, 0, width, height);
+        presentCtx.drawImage(offscreen.domElement, 0, 0, width, height);
+      }
+    } finally {
+      restoreUniforms(points, prev);
+    }
   };
 
   try { recorder.start(); } catch (e) {
