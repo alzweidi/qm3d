@@ -8,7 +8,6 @@ function createOffscreenRenderer(width, height, dpr = 1, preserve = false) {
     powerPreference: 'high-performance'
   });
 
-  // color space and tone mapping for consistent output
   try {
     if ("outputColorSpace" in renderer && THREE.SRGBColorSpace) {
       renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -97,7 +96,6 @@ export async function captureScreenshot({ scene, camera, points, width, height, 
   } finally {
     restoreUniforms(points, prev);
   }
-  // downscale to target size when supersampled
   const outCanvas = composedDpr === 1 ? offscreen.domElement : downscaleCanvas(offscreen.domElement, width, height);
   const blob = await new Promise((resolve, reject) => {
     try {
@@ -144,7 +142,6 @@ export function startRecording({ scene, camera, points, width, height, dpr = 1, 
   const composedDpr = (dpr || 1) * ssaaFactor;
   const offscreen = createOffscreenRenderer(width, height, composedDpr, false);
 
-  // when supersampling, draw into a presentation 2D canvas at target size and capture that stream
   let presentCanvas = null;
   let presentCtx = null;
   let stream = null;

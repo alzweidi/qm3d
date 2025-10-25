@@ -67,12 +67,22 @@ export default function QuantumWaveEngine() {
   const [showPhase, setShowPhase] = useState(true);
   const [running, setRunning] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
+  const [isCapturingShot, setIsCapturingShot] = useState(false);
+  const [recordElapsedSec, setRecordElapsedSec] = useState(0);
 
   // refs for dom and three.js
   const mountRef = useRef(null);
   const threeRefs = useRef({});
   const maxDRef = useRef(1e-9);
   const recorderRef = useRef(null);
+  const recordTimerRef = useRef(null);
+
+  const recTimeLabel = useMemo(() => {
+    const s = recordElapsedSec;
+    const mm = String(Math.floor(s / 60)).padStart(2, '0');
+    const ss = String(s % 60).padStart(2, '0');
+    return `${mm}:${ss}`;
+  }, [recordElapsedSec]);
 
   const getCaptureSize = useCallback((baseWidth) => {
     const el = mountRef.current;
@@ -260,6 +270,20 @@ export default function QuantumWaveEngine() {
   }, [renderOnce]);
 
 
+  useEffect(() => {
+    if (isRecording) {
+      setRecordElapsedSec(0);
+      const id = setInterval(() => setRecordElapsedSec((v) => v + 1), 1000);
+      recordTimerRef.current = id;
+      return () => {
+        clearInterval(id);
+        recordTimerRef.current = null;
+      };
+    }
+    return undefined;
+  }, [isRecording]);
+
+
   // animation loop
   useEffect(() => {
     let raf = 0;
@@ -404,9 +428,12 @@ export default function QuantumWaveEngine() {
     const pad = (n) => String(n).padStart(2, '0');
     const filename = `quantum_screenshot_${ts.getFullYear()}${pad(ts.getMonth() + 1)}${pad(ts.getDate())}_${pad(ts.getHours())}${pad(ts.getMinutes())}${pad(ts.getSeconds())}.png`;
     try {
+      setIsCapturingShot(true);
       await captureScreenshot({ scene, camera, points, width, height, dpr: 1, ssaa: 2, filename });
     } catch (e) {
       console.error(e);
+    } finally {
+      setIsCapturingShot(false);
     }
   }
 
@@ -481,7 +508,7 @@ export default function QuantumWaveEngine() {
           />
           <div className="flex gap-2 mt-3 flex-wrap">
             <button 
-              className="btn btn--secondary" 
+              className={`btn ${running ? 'btn--primary' : 'btn--secondary'}`} 
               onClick={() => setRunning(r => !r)}
             >
               {running ? "pause" : "run"}
@@ -531,15 +558,16 @@ export default function QuantumWaveEngine() {
             <button 
               className="btn btn--secondary" 
               onClick={handleScreenshot}
+              disabled={isCapturingShot}
             >
-              screenshot
+              {isCapturingShot ? "saving..." : "screenshot"}
             </button>
             <button 
               className="btn btn--primary" 
               onClick={handleStartRecording}
               disabled={isRecording}
             >
-              start recording
+              {isRecording ? "recording..." : "start recording"}
             </button>
             <button 
               className="btn btn--secondary" 
@@ -548,6 +576,12 @@ export default function QuantumWaveEngine() {
             >
               stop recording
             </button>
+            {isRecording && (
+              <div className="flex items-center gap-2 ml-auto">
+                <span style={{ width: 8, height: 8, backgroundColor: '#ef4444', borderRadius: '9999px', display: 'inline-block' }} />
+                <span className="text-red-500 font-medium">REC {recTimeLabel}</span>
+              </div>
+            )}
           </div>
         </div>
 
