@@ -578,7 +578,7 @@ export default function QuantumWaveEngine() {
             </button>
             {isRecording && (
               <div className="flex items-center gap-2 ml-auto">
-                <span style={{ width: 8, height: 8, backgroundColor: '#ef4444', borderRadius: '9999px', display: 'inline-block' }} />
+                <span className="w-2 h-2 bg-red-500 rounded-full inline-block" />
                 <span className="text-red-500 font-medium">REC {recTimeLabel}</span>
               </div>
             )}
