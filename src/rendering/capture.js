@@ -47,6 +47,7 @@ function syncCameraToSize(srcCam, dstCam, width, height) {
   dstCam.quaternion.copy(srcCam.quaternion);
   dstCam.aspect = width / height;
   dstCam.updateProjectionMatrix();
+  dstCam.updateMatrixWorld(true);
 }
 
 function setUniformsForOffscreen(points, renderer, camera, maxPointSize) {
@@ -73,7 +74,7 @@ function downscaleCanvas(srcCanvas, outWidth, outHeight) {
   const dst = document.createElement('canvas');
   dst.width = outWidth;
   dst.height = outHeight;
-  const ctx = dst.getContext('2d');
+  const ctx = dst.getContext('2d', { willReadFrequently: true });
   if (ctx) {
     try { ctx.imageSmoothingEnabled = true; } catch (e) { void e; }
     try { ctx.imageSmoothingQuality = 'high'; } catch (e) { void e; }
@@ -82,30 +83,99 @@ function downscaleCanvas(srcCanvas, outWidth, outHeight) {
   return dst;
 }
 
-export async function captureScreenshot({ scene, camera, points, width, height, dpr = 1, filename, ssaa = 1 }) {
-  if (!scene || !camera) throw new Error('Scene and camera are required');
-  const ssaaFactor = Math.max(1, Math.floor(ssaa));
-  const composedDpr = (dpr || 1) * ssaaFactor;
-  const offscreen = createOffscreenRenderer(width, height, composedDpr, true);
-  const camClone = new THREE.PerspectiveCamera();
-  syncCameraToSize(camera, camClone, width, height);
-  const maxPs = getMaxPointSize(offscreen);
-  const prev = setUniformsForOffscreen(points, offscreen, camClone, maxPs);
-  try {
-    offscreen.render(scene, camClone);
-  } finally {
-    restoreUniforms(points, prev);
-  }
-  const outCanvas = composedDpr === 1 ? offscreen.domElement : downscaleCanvas(offscreen.domElement, width, height);
-  const blob = await new Promise((resolve, reject) => {
+function canvasToBlob(canvas) {
+  return new Promise((resolve, reject) => {
     try {
-      outCanvas.toBlob((b) => {
-        if (b) resolve(b); else reject(new Error('toBlob failed'));
-      }, 'image/png');
+      if (canvas.toBlob) {
+        canvas.toBlob((b) => {
+          if (b) {
+            resolve(b);
+            return;
+          }
+          try {
+            const url = canvas.toDataURL('image/png');
+            const arr = url.split(',');
+            const mime = arr[0].match(/:(.*?);/)[1];
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) u8arr[n] = bstr.charCodeAt(n);
+            resolve(new Blob([u8arr], { type: mime }));
+          } catch (ee) {
+            reject(ee);
+          }
+        }, 'image/png');
+      } else {
+        const url = canvas.toDataURL('image/png');
+        const arr = url.split(',');
+        const mime = arr[0].match(/:(.*?);/)[1];
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) u8arr[n] = bstr.charCodeAt(n);
+        resolve(new Blob([u8arr], { type: mime }));
+      }
     } catch (e) {
       reject(e);
     }
   });
+}
+
+export async function captureScreenshot({ scene, camera, points, width, height, dpr = 1, filename, ssaa = 1 }) {
+  if (!scene || !camera) throw new Error('Scene and camera are required');
+  const ssaaFactor = Math.max(1, Math.floor(ssaa));
+  const targetDpr = (dpr || 1) * ssaaFactor;
+  const offscreen = createOffscreenRenderer(width, height, 1, true);
+  const camClone = new THREE.PerspectiveCamera();
+  syncCameraToSize(camera, camClone, width, height);
+  try { if (scene?.background?.isColor) offscreen.setClearColor(scene.background, 1); } catch (e) { void e; }
+  try {
+    const gl = offscreen.getContext?.();
+    const maxRB = gl?.getParameter?.(gl.MAX_RENDERBUFFER_SIZE) ?? Infinity;
+    const maxTex = gl?.getParameter?.(gl.MAX_TEXTURE_SIZE) ?? Infinity;
+    const maxVD = gl?.getParameter?.(gl.MAX_VIEWPORT_DIMS);
+    const maxView = Array.isArray(maxVD) ? Math.min(maxVD[0] || Infinity, maxVD[1] || Infinity) : Infinity;
+    const limit = Math.max(1, Math.min(maxRB, maxTex, maxView));
+    const safeDpr = Math.max(0.25, Math.min(targetDpr, limit / Math.max(1, width), limit / Math.max(1, height)));
+    if (Number.isFinite(safeDpr)) {
+      offscreen.setPixelRatio(safeDpr);
+      offscreen.setSize(width, height, false);
+    }
+  } catch (e) { void e; }
+  const maxPs = getMaxPointSize(offscreen);
+  const prev = setUniformsForOffscreen(points, offscreen, camClone, maxPs);
+  let outCanvas;
+  try {
+    const dprNow = offscreen.getPixelRatio?.() ?? 1;
+    const rtW = Math.max(1, Math.floor(width * dprNow));
+    const rtH = Math.max(1, Math.floor(height * dprNow));
+    const rt = new THREE.WebGLRenderTarget(rtW, rtH, { depthBuffer: true, stencilBuffer: false });
+    try {
+      offscreen.setRenderTarget(rt);
+      offscreen.clear(true, true, true);
+      offscreen.render(scene, camClone);
+      const pixels = new Uint8Array(rtW * rtH * 4);
+      offscreen.readRenderTargetPixels(rt, 0, 0, rtW, rtH, pixels);
+      const src = document.createElement('canvas');
+      src.width = rtW; src.height = rtH;
+      const sctx = src.getContext('2d', { willReadFrequently: true });
+      const img = sctx.createImageData(rtW, rtH);
+      const rowBytes = rtW * 4;
+      for (let y = 0; y < rtH; y++) {
+        const srcRow = (rtH - 1 - y) * rowBytes;
+        const dstRow = y * rowBytes;
+        img.data.set(pixels.subarray(srcRow, srcRow + rowBytes), dstRow);
+      }
+      sctx.putImageData(img, 0, 0);
+      outCanvas = downscaleCanvas(src, width, height);
+    } finally {
+      offscreen.setRenderTarget(null);
+      try { rt.dispose(); } catch (e) { void e; }
+    }
+  } finally {
+    restoreUniforms(points, prev);
+  }
+  const blob = await canvasToBlob(outCanvas);
   offscreen.dispose();
   if (filename && typeof document !== 'undefined') {
     const url = URL.createObjectURL(blob);
