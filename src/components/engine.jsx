@@ -30,6 +30,7 @@ import {
   renderScene,
   disposeThreeJS
 } from '../rendering/visualisation.js';
+import { captureScreenshot, startRecording } from '../rendering/capture.js';
 
 export default function QuantumWaveEngine() {
   // simulation parameters
@@ -65,11 +66,32 @@ export default function QuantumWaveEngine() {
   const [densityScale, setDensityScale] = useState(1.2);
   const [showPhase, setShowPhase] = useState(true);
   const [running, setRunning] = useState(true);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isCapturingShot, setIsCapturingShot] = useState(false);
+  const [recordElapsedSec, setRecordElapsedSec] = useState(0);
 
   // refs for dom and three.js
   const mountRef = useRef(null);
   const threeRefs = useRef({});
   const maxDRef = useRef(1e-9);
+  const recorderRef = useRef(null);
+  const recordTimerRef = useRef(null);
+
+  const recTimeLabel = useMemo(() => {
+    const s = recordElapsedSec;
+    const mm = String(Math.floor(s / 60)).padStart(2, '0');
+    const ss = String(s % 60).padStart(2, '0');
+    return `${mm}:${ss}`;
+  }, [recordElapsedSec]);
+
+  const getCaptureSize = useCallback((baseWidth) => {
+    const el = mountRef.current;
+    if (!el) return { width: baseWidth, height: Math.round(baseWidth * 9 / 16) };
+    const w = el.clientWidth || 1;
+    const h = el.clientHeight || 480;
+    const aspect = h / Math.max(1, w);
+    return { width: baseWidth, height: Math.round(baseWidth * aspect) };
+  }, []);
 
   // physics arrays
   const size = useMemo(() => N * N * N, [N]);
@@ -248,6 +270,20 @@ export default function QuantumWaveEngine() {
   }, [renderOnce]);
 
 
+  useEffect(() => {
+    if (isRecording) {
+      setRecordElapsedSec(0);
+      const id = setInterval(() => setRecordElapsedSec((v) => v + 1), 1000);
+      recordTimerRef.current = id;
+      return () => {
+        clearInterval(id);
+        recordTimerRef.current = null;
+      };
+    }
+    return undefined;
+  }, [isRecording]);
+
+
   // animation loop
   useEffect(() => {
     let raf = 0;
@@ -275,12 +311,24 @@ export default function QuantumWaveEngine() {
         }
         updateVisualisation();
         renderOnce();
+        {
+          const { scene, camera } = threeRefs.current;
+          if (recorderRef.current && scene && camera) {
+            recorderRef.current.renderFrame(scene, camera);
+          }
+        }
         raf = requestAnimationFrame(tick);
       }
     };
 
     const onControlsChange = () => {
       if (!running) renderDirect();
+      {
+        const { scene, camera } = threeRefs.current;
+        if (recorderRef.current && scene && camera) {
+          recorderRef.current.renderFrame(scene, camera);
+        }
+      }
     };
 
     const { controls } = threeRefs.current;
@@ -372,6 +420,68 @@ export default function QuantumWaveEngine() {
     renderOnce();
   }
 
+  async function handleScreenshot() {
+    const { scene, camera, points, renderer } = threeRefs.current;
+    if (!scene || !camera) return;
+    const { width, height } = getCaptureSize(3840);
+    const ts = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const filename = `quantum_screenshot_${ts.getFullYear()}${pad(ts.getMonth() + 1)}${pad(ts.getDate())}_${pad(ts.getHours())}${pad(ts.getMinutes())}${pad(ts.getSeconds())}.png`;
+    try {
+      setIsCapturingShot(true);
+      await captureScreenshot({ scene, camera, points, renderer, width, height, dpr: 1, ssaa: 2, filename });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsCapturingShot(false);
+    }
+  }
+
+  function handleStartRecording() {
+    if (recorderRef.current) return;
+    const { scene, camera, points } = threeRefs.current;
+    if (!scene || !camera) return;
+    const { width, height } = getCaptureSize(1920);
+    try {
+      const session = startRecording({ scene, camera, points, width, height, dpr: 1, fps: 60, ssaa: 2, videoBitsPerSecond: 35000000 });
+      recorderRef.current = session;
+      setIsRecording(true);
+    } catch (e) {
+      console.error(e);
+      recorderRef.current = null;
+      setIsRecording(false);
+    }
+  }
+
+  async function handleStopRecording() {
+    const session = recorderRef.current;
+    if (!session) return;
+    try {
+      const blob = await session.stop();
+      recorderRef.current = null;
+      setIsRecording(false);
+      if (typeof document !== 'undefined') {
+        const ts = new Date();
+        const pad = (n) => String(n).padStart(2, '0');
+        const filename = `quantum_recording_${ts.getFullYear()}${pad(ts.getMonth() + 1)}${pad(ts.getDate())}_${pad(ts.getHours())}${pad(ts.getMinutes())}${pad(ts.getSeconds())}.webm`;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          URL.revokeObjectURL(url);
+          a.remove();
+        }, 0);
+      }
+    } catch (e) {
+      console.error(e);
+      recorderRef.current = null;
+      setIsRecording(false);
+    }
+  }
+
   // run self-tests on mount
   useEffect(() => {
     // avoid running FFT self-tests during unit/component test runs
@@ -398,7 +508,7 @@ export default function QuantumWaveEngine() {
           />
           <div className="flex gap-2 mt-3 flex-wrap">
             <button 
-              className="btn btn--secondary" 
+              className={`btn ${running ? 'btn--primary' : 'btn--secondary'}`} 
               onClick={() => setRunning(r => !r)}
             >
               {running ? "pause" : "run"}
@@ -445,6 +555,33 @@ export default function QuantumWaveEngine() {
             >
               harmonic
             </button>
+            <button 
+              className="btn btn--secondary" 
+              onClick={handleScreenshot}
+              disabled={isCapturingShot}
+            >
+              {isCapturingShot ? "saving..." : "screenshot"}
+            </button>
+            <button 
+              className="btn btn--primary" 
+              onClick={handleStartRecording}
+              disabled={isRecording}
+            >
+              {isRecording ? "recording..." : "start recording"}
+            </button>
+            <button 
+              className="btn btn--secondary" 
+              onClick={handleStopRecording}
+              disabled={!isRecording}
+            >
+              stop recording
+            </button>
+            {isRecording && (
+              <div className="flex items-center gap-2 ml-auto">
+                <span className="w-2 h-2 bg-red-500 rounded-full inline-block" />
+                <span className="text-red-500 font-medium">REC {recTimeLabel}</span>
+              </div>
+            )}
           </div>
         </div>
 
