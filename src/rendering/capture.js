@@ -8,16 +8,14 @@ function createOffscreenRenderer(width, height, dpr = 1, preserve = false) {
     powerPreference: 'high-performance'
   });
 
-  try {
-    if ("outputColorSpace" in renderer && THREE.SRGBColorSpace) {
-      renderer.outputColorSpace = THREE.SRGBColorSpace;
-    } else if ("outputEncoding" in renderer && THREE.sRGBEncoding) {
-      renderer.outputEncoding = THREE.sRGBEncoding;
-    }
-    if ("NoToneMapping" in THREE) {
-      renderer.toneMapping = THREE.NoToneMapping;
-    }
-  } catch (e) { void e; }
+  if ("outputColorSpace" in renderer && THREE.SRGBColorSpace) {
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+  } else if ("outputEncoding" in renderer && THREE.sRGBEncoding) {
+    renderer.outputEncoding = THREE.sRGBEncoding;
+  }
+  if ("NoToneMapping" in THREE) {
+    renderer.toneMapping = THREE.NoToneMapping;
+  }
 
   renderer.setPixelRatio(dpr);
   renderer.setSize(width, height, false);
@@ -26,10 +24,8 @@ function createOffscreenRenderer(width, height, dpr = 1, preserve = false) {
 
 function getMaxPointSize(renderer) {
   const gl = renderer?.getContext?.();
-  try {
-    const range = gl?.getParameter?.(gl.ALIASED_POINT_SIZE_RANGE);
-    if (Array.isArray(range) && range.length > 1) return range[1];
-  } catch (e) { void e; }
+  const range = gl?.getParameter?.(gl.ALIASED_POINT_SIZE_RANGE);
+  if (Array.isArray(range) && range.length > 1) return range[1];
   return 64;
 }
 
@@ -41,7 +37,7 @@ function computeSizeScale(dpr, fovDeg) {
 function syncCameraToSize(srcCam, dstCam, width, height) {
   dstCam.copy(srcCam, false);
   dstCam.aspect = width / height;
-  try { dstCam.clearViewOffset?.(); } catch (e) { void e; }
+  if (typeof dstCam.clearViewOffset === 'function') dstCam.clearViewOffset();
   dstCam.updateProjectionMatrix();
   dstCam.updateMatrixWorld(true);
 }
@@ -72,8 +68,8 @@ function downscaleCanvas(srcCanvas, outWidth, outHeight) {
   dst.height = outHeight;
   const ctx = dst.getContext('2d', { willReadFrequently: true });
   if (ctx) {
-    try { ctx.imageSmoothingEnabled = true; } catch (e) { void e; }
-    try { ctx.imageSmoothingQuality = 'high'; } catch (e) { void e; }
+    if ('imageSmoothingEnabled' in ctx) ctx.imageSmoothingEnabled = true;
+    if ('imageSmoothingQuality' in ctx) ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(srcCanvas, 0, 0, srcCanvas.width, srcCanvas.height, 0, 0, outWidth, outHeight);
   }
   return dst;
@@ -95,10 +91,10 @@ function canvasToBlob(canvas) {
             const bstr = atob(arr[1]);
             let n = bstr.length;
             const u8arr = new Uint8Array(n);
-            while (n--) u8arr[n] = bstr.charCodeAt(n);
+            while (n--) u8arr[n] = (bstr.codePointAt(n) ?? 0) & 255;
             resolve(new Blob([u8arr], { type: mime }));
-          } catch (ee) {
-            reject(ee);
+          } catch (error_) {
+            reject(error_);
           }
         }, 'image/png');
       } else {
@@ -108,7 +104,7 @@ function canvasToBlob(canvas) {
         const bstr = atob(arr[1]);
         let n = bstr.length;
         const u8arr = new Uint8Array(n);
-        while (n--) u8arr[n] = bstr.charCodeAt(n);
+        while (n--) u8arr[n] = (bstr.codePointAt(n) ?? 0) & 255;
         resolve(new Blob([u8arr], { type: mime }));
       }
     } catch (e) {
@@ -173,7 +169,7 @@ export async function captureScreenshot({ scene, camera, points, renderer, width
     if (prevViewport) renderer.setViewport(prevViewport);
     if (prevScissor) renderer.setScissor(prevScissor);
     renderer.setScissorTest(prevScissorTest);
-    try { rt.dispose(); } catch (e) { void e; }
+    if (typeof rt.dispose === 'function') rt.dispose();
   }
   const outBlob = await canvasToBlob(outCanvas);
   if (filename && typeof document !== 'undefined') {
@@ -192,13 +188,34 @@ export async function captureScreenshot({ scene, camera, points, renderer, width
 }
 
 function selectMimeType(candidates) {
-  if (typeof window === 'undefined' || typeof window.MediaRecorder === 'undefined') return null;
-  const isSupported = window.MediaRecorder.isTypeSupported?.bind(window.MediaRecorder);
+  if (globalThis.MediaRecorder === undefined) return null;
+  const isSupported = globalThis.MediaRecorder.isTypeSupported?.bind(globalThis.MediaRecorder);
   for (const t of candidates) {
     if (!t) continue;
     if (!isSupported || isSupported(t)) return t;
   }
   return '';
+}
+
+function stopTracks(stream) {
+  const tracks = stream?.getTracks?.();
+  if (Array.isArray(tracks)) {
+    for (const t of tracks) {
+      if (typeof t.stop === 'function') t.stop();
+    }
+  }
+}
+
+function createPresentCanvas(width, height) {
+  const presentCanvas = document.createElement('canvas');
+  presentCanvas.width = width;
+  presentCanvas.height = height;
+  const presentCtx = presentCanvas.getContext('2d');
+  if (presentCtx) {
+    if ('imageSmoothingEnabled' in presentCtx) presentCtx.imageSmoothingEnabled = true;
+    if ('imageSmoothingQuality' in presentCtx) presentCtx.imageSmoothingQuality = 'high';
+  }
+  return { presentCanvas, presentCtx };
 }
 
 export function startRecording({ scene, camera, points, width, height, dpr = 1, fps = 60, mimeCandidates = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'], videoBitsPerSecond = 25000000, ssaa = 1 }) {
@@ -215,14 +232,7 @@ export function startRecording({ scene, camera, points, width, height, dpr = 1, 
   let presentCtx = null;
   let stream = null;
   if (ssaaFactor > 1) {
-    presentCanvas = document.createElement('canvas');
-    presentCanvas.width = width;
-    presentCanvas.height = height;
-    presentCtx = presentCanvas.getContext('2d');
-    if (presentCtx) {
-      try { presentCtx.imageSmoothingEnabled = true; } catch (e) { void e; }
-      try { presentCtx.imageSmoothingQuality = 'high'; } catch (e) { void e; }
-    }
+    ({ presentCanvas, presentCtx } = createPresentCanvas(width, height));
     stream = presentCanvas.captureStream?.(fps);
   } else {
     stream = offscreen.domElement.captureStream?.(fps);
@@ -248,18 +258,14 @@ export function startRecording({ scene, camera, points, width, height, dpr = 1, 
     if (stopped) return resolve(new Blob([], { type: mimeType }));
     stopped = true;
     recorder.onstop = () => {
-      try {
-        const blob = new Blob(chunks, { type: mimeType });
-        try { stream.getTracks?.().forEach(t => { try { t.stop(); } catch (e2) { void e2; } }); } catch (e2) { void e2; }
-        offscreen.dispose();
-        resolve(blob);
-      } catch (e) {
-        try { stream.getTracks?.().forEach(t => { try { t.stop(); } catch (e2) { void e2; } }); } catch (e2) { void e2; }
-        offscreen.dispose();
-        reject(e);
-      }
+      let blob;
+      try { blob = new Blob(chunks, { type: mimeType }); }
+      catch (e) { stopTracks(stream); offscreen.dispose(); return reject(e); }
+      stopTracks(stream);
+      offscreen.dispose();
+      resolve(blob);
     };
-    try { recorder.stop(); } catch (e) { reject(e); }
+    try { recorder.stop(); } catch (e) { stopTracks(stream); offscreen.dispose(); reject(e); }
   });
 
   const renderFrame = (srcScene, srcCamera) => {
@@ -277,11 +283,7 @@ export function startRecording({ scene, camera, points, width, height, dpr = 1, 
     }
   };
 
-  try { recorder.start(); } catch (e) {
-    try { stream.getTracks?.().forEach(t => { try { t.stop(); } catch (e2) { void e2; } }); } catch (e2) { void e2; }
-    offscreen.dispose();
-    throw e;
-  }
+  try { recorder.start(); } catch (e) { stopTracks(stream); offscreen.dispose(); throw e; }
 
   return { renderFrame, stop, mimeType };
 }
