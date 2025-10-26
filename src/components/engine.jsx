@@ -421,7 +421,7 @@ export default function QuantumWaveEngine() {
   }
 
   async function handleScreenshot() {
-    const { scene, camera, points } = threeRefs.current;
+    const { scene, camera, points, renderer } = threeRefs.current;
     if (!scene || !camera) return;
     const { width, height } = getCaptureSize(3840);
     const ts = new Date();
@@ -429,7 +429,7 @@ export default function QuantumWaveEngine() {
     const filename = `quantum_screenshot_${ts.getFullYear()}${pad(ts.getMonth() + 1)}${pad(ts.getDate())}_${pad(ts.getHours())}${pad(ts.getMinutes())}${pad(ts.getSeconds())}.png`;
     try {
       setIsCapturingShot(true);
-      await captureScreenshot({ scene, camera, points, width, height, dpr: 1, ssaa: 2, filename });
+      await captureScreenshot({ scene, camera, points, renderer, width, height, dpr: 1, ssaa: 2, filename });
     } catch (e) {
       console.error(e);
     } finally {
