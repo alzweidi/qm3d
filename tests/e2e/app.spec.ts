@@ -1,11 +1,12 @@
 import { test, expect } from '@playwright/test';
+import type { Page, Locator } from '@playwright/test';
 
-async function getMainCard(page) {
+async function getMainCard(page: Page): Promise<Locator> {
   // left-hand main card container
-  return page.locator('div.lg\\:col-span-2.card.p-4').first();
+  return page.locator(String.raw`div.lg\:col-span-2.card.p-4`).first();
 }
 
-async function getCanvas(page) {
+async function getCanvas(page: Page): Promise<Locator> {
   return page.locator('canvas').first();
 }
 

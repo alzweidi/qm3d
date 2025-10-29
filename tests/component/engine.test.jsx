@@ -16,7 +16,7 @@ vi.mock('../../src/rendering/visualisation.js', () => {
       getContext: () => ({ getParameter: () => [1, 64], ALIASED_POINT_SIZE_RANGE: 'ALIASED_POINT_SIZE_RANGE' }),
       render: vi.fn(),
       dispose: vi.fn(),
-      domElement: (typeof document !== 'undefined') ? document.createElement('canvas') : null,
+      domElement: (typeof document === 'undefined') ? null : document.createElement('canvas'),
     };
     const camera = { fov: 45, updateProjectionMatrix: vi.fn(), aspect: 1 };
     const scene = { add: vi.fn() };
@@ -28,7 +28,7 @@ vi.mock('../../src/rendering/visualisation.js', () => {
     const size = N * N * N;
     const ampAttr = { array: new Float32Array(size), needsUpdate: false };
     const phaseAttr = { array: new Float32Array(size), needsUpdate: false };
-    const material = { uniforms: { uShowPhase: { value: showPhase ? 1.0 : 0.0 }, uSizeScale: { value: 120.0 }, uMaxPointSize: { value: maxPointSize } } };
+    const material = { uniforms: { uShowPhase: { value: showPhase ? 1 : 0 }, uSizeScale: { value: 120 }, uMaxPointSize: { value: maxPointSize } } };
     const geometry = { attributes: { aAmp: ampAttr, aPhase: phaseAttr }, dispose: vi.fn() };
     const points = { material, frustumCulled: false };
     lastPointCloud = { points, geometry, material, ampAttr, phaseAttr };
@@ -36,9 +36,9 @@ vi.mock('../../src/rendering/visualisation.js', () => {
   }
 
   function createBoundingBox() { return { geometry: { dispose: vi.fn() }, material: { dispose: vi.fn() } }; }
-  function handleResize() {}
-  function renderScene() {}
-  function disposeThreeJS() {}
+  const handleResize = vi.fn();
+  const renderScene = vi.fn();
+  const disposeThreeJS = vi.fn();
 
   return {
     initialiseThreeJS,
@@ -54,10 +54,10 @@ vi.mock('../../src/rendering/visualisation.js', () => {
 
 // Ensure RAF exists in JSDOM
 beforeAll(() => {
-  if (!globalThis.requestAnimationFrame) {
+  if (globalThis.requestAnimationFrame == null) {
     globalThis.requestAnimationFrame = (cb) => setTimeout(cb, 0);
   }
-  if (!globalThis.cancelAnimationFrame) {
+  if (globalThis.cancelAnimationFrame == null) {
     globalThis.cancelAnimationFrame = (id) => clearTimeout(id);
   }
   Object.defineProperty(document, 'hidden', { value: false, configurable: true });
@@ -93,7 +93,7 @@ describe('QuantumWaveEngine (mocked visualisation)', () => {
 
     await waitFor(() => expect(Vis.__getLastPointCloud()).toBeTruthy());
 
-    const mainCard = document.querySelector('.lg\\:col-span-2.card.p-4');
+    const mainCard = document.querySelector(String.raw`.lg\:col-span-2.card.p-4`);
     expect(mainCard).toBeTruthy();
     // Should show either an FPS readout or a mode label
     const hasFps = !!within(mainCard).queryByText(/\bfps\s+\d+\.\d\b/i);
@@ -106,7 +106,7 @@ describe('QuantumWaveEngine (mocked visualisation)', () => {
 
     await waitFor(() => expect(Vis.__getLastPointCloud()).toBeTruthy());
 
-    const mainCard = document.querySelector('.lg\\:col-span-2.card.p-4');
+    const mainCard = document.querySelector(String.raw`.lg\:col-span-2.card.p-4`);
     const utils = within(mainCard);
 
     // Pause
@@ -139,7 +139,7 @@ describe('QuantumWaveEngine (mocked visualisation)', () => {
 
     await waitFor(() => expect(Vis.__getLastPointCloud()).toBeTruthy());
 
-    const mainCard = document.querySelector('.lg\\:col-span-2.card.p-4');
+    const mainCard = document.querySelector(String.raw`.lg\:col-span-2.card.p-4`);
     const utils = within(mainCard);
     fireEvent.click(utils.getByText(/add packet/i));
 
@@ -159,7 +159,7 @@ describe('QuantumWaveEngine (mocked visualisation)', () => {
     await waitFor(() => expect(Vis.__getLastPointCloud()).toBeTruthy());
 
     // Click the 'add packet' button in the main left panel (not the Controls panel)
-    const mainCard = document.querySelector('.lg\\:col-span-2.card.p-4');
+    const mainCard = document.querySelector(String.raw`.lg\:col-span-2.card.p-4`);
     expect(mainCard).toBeTruthy();
     const utils = within(mainCard);
     fireEvent.click(utils.getByText(/add packet/i));
@@ -187,7 +187,7 @@ describe('QuantumWaveEngine (mocked visualisation)', () => {
     fireEvent.change(k0xInput, { target: { value: '9999' } });
 
     // Click the main panel 'add packet'
-    const mainCard = document.querySelector('.lg\\:col-span-2.card.p-4');
+    const mainCard = document.querySelector(String.raw`.lg\:col-span-2.card.p-4`);
     const utils = within(mainCard);
     fireEvent.click(utils.getByText(/add packet/i));
 
@@ -222,7 +222,7 @@ describe('QuantumWaveEngine (mocked visualisation)', () => {
     fireEvent.change(lInput, { target: { value: '16' } });
 
     // Now click add packet, engine will clamp again
-    const mainCard = document.querySelector('.lg\\:col-span-2.card.p-4');
+    const mainCard = document.querySelector(String.raw`.lg\:col-span-2.card.p-4`);
     const utils = within(mainCard);
     fireEvent.click(utils.getByText(/add packet/i));
 

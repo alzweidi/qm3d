@@ -49,13 +49,13 @@ describe('quantum.js', () => {
       0, 0, 0,
       sigma, sigma, sigma,
       kx, 0, 0,
-      1.0,
+      1,
       gX, gY, gZ, pX, pY, pZ
     );
 
     renormalize(psiRe, psiIm, cellVol);
     const norm0 = calculateNorm(psiRe, psiIm, cellVol);
-    expect(norm0).toBeCloseTo(1.0, 6);
+    expect(norm0).toBeCloseTo(1, 6);
 
     const kArrays = createKSpaceArrays(N, L);
     const expK = new Float32Array(2 * size);
@@ -64,7 +64,7 @@ describe('quantum.js', () => {
     const dt = 0.02 * dx * dx;
 
     buildKineticExponentials(expK, kArrays, N, dt);
-    buildPotentialExponentials(expVh, new Float32Array(size), cap, dt, 0.0);
+    buildPotentialExponentials(expVh, new Float32Array(size), cap, dt, 0);
 
     const sRe = new Float32Array(N);
     const sIm = new Float32Array(N);
@@ -72,7 +72,7 @@ describe('quantum.js', () => {
       timeStep(psiRe, psiIm, expVh, expK, N, sRe, sIm);
     }
     const normT = calculateNorm(psiRe, psiIm, cellVol);
-    expect(normT).toBeCloseTo(1.0, 4);
+    expect(normT).toBeCloseTo(1, 4);
   });
 
   it('super-Nyquist kx aliases to DC bin in FFT (motivates UI clamp)', () => {
@@ -101,7 +101,7 @@ describe('quantum.js', () => {
       0, 0, 0,
       0.6, 0.6, 0.6,
       kx, 0, 0,
-      1.0,
+      1,
       gX, gY, gZ, pX, pY, pZ
     );
 
@@ -159,7 +159,7 @@ describe('quantum.js', () => {
     // v: [0,1,-2, 0,0,0, 0,0] to test different angles
     V[0] = 0; V[1] = 1; V[2] = -2;
     const dt = 0.1;
-    const absorbStrength = 3.0;
+    const absorbStrength = 3;
     const expVh = new Float32Array(2 * size);
 
     // case 1: no CAP
@@ -172,7 +172,7 @@ describe('quantum.js', () => {
 
     // case 2: with CAP
     const capS2 = new Float32Array(size);
-    capS2[2] = 2.0; // non-zero cap only at index 2
+    capS2[2] = 2; // non-zero cap only at index 2
     buildPotentialExponentials(expVh, V, capS2, dt, absorbStrength);
     theta = -0.5 * V[2] * dt;
     const decay = Math.exp(-0.5 * absorbStrength * capS2[2] * dt);
@@ -244,9 +244,9 @@ describe('quantum.js', () => {
     const sRe = new Float32Array(N);
     const sIm = new Float32Array(N);
 
-    const norm0 = calculateNorm(psiRe, psiIm, 1.0);
+    const norm0 = calculateNorm(psiRe, psiIm, 1);
     kineticFullStep(psiRe, psiIm, expK, N, sRe, sIm);
-    const norm1 = calculateNorm(psiRe, psiIm, 1.0);
+    const norm1 = calculateNorm(psiRe, psiIm, 1);
     expect(Math.abs(norm1 - norm0)).toBeLessThan(1e-6);
   });
 
@@ -272,20 +272,20 @@ describe('quantum.js', () => {
     const sRe = new Float32Array(N);
     const sIm = new Float32Array(N);
 
-    const norm0 = calculateNorm(psiReA, psiImA, 1.0);
+    const norm0 = calculateNorm(psiReA, psiImA, 1);
     timeStep(psiReA, psiImA, expVh, expK, N, sRe, sIm);
-    const norm1 = calculateNorm(psiReA, psiImA, 1.0);
+    const norm1 = calculateNorm(psiReA, psiImA, 1);
     expect(Math.abs(norm1 - norm0)).toBeLessThan(1e-6);
 
     // case 2: with CAP
     const psiReB = psiReA.slice();
     const psiImB = psiImA.slice();
     const capS2 = createAbsorbingBoundary(N, 0.25);
-    buildPotentialExponentials(expVh, V, capS2, 0.02, 3.0);
+    buildPotentialExponentials(expVh, V, capS2, 0.02, 3);
 
-    const normB0 = calculateNorm(psiReB, psiImB, 1.0);
+    const normB0 = calculateNorm(psiReB, psiImB, 1);
     timeStep(psiReB, psiImB, expVh, expK, N, sRe, sIm);
-    const normB1 = calculateNorm(psiReB, psiImB, 1.0);
+    const normB1 = calculateNorm(psiReB, psiImB, 1);
     expect(normB1).toBeLessThan(normB0);
   });
 
@@ -341,7 +341,7 @@ describe('quantum.js', () => {
       0, 0, 0, // center
       0.6, 0.6, 0.6, // widths
       0, 0, 0, // k
-      1.0,
+      1,
       gX, gY, gZ, pX, pY, pZ
     );
 
@@ -368,7 +368,7 @@ describe('quantum.js', () => {
       0, 0, 0,
       0.6, 0.6, 0.6,
       0, 0, 0,
-      2.0,
+      2,
       gX, gY, gZ, pX, pY, pZ
     );
     let ratioOK = true;
@@ -402,7 +402,7 @@ describe('quantum.js', () => {
     const gX = new Float32Array(N), gY = new Float32Array(N), gZ = new Float32Array(N);
     const pX = new Float32Array(N), pY = new Float32Array(N), pZ = new Float32Array(N);
 
-    addPacket3D(psiRe, psiIm, coord, N, 0, 0, 0, 0.6, 0.6, 0.6, 0, 0, 0, 1.0, gX, gY, gZ, pX, pY, pZ);
+    addPacket3D(psiRe, psiIm, coord, N, 0, 0, 0, 0.6, 0.6, 0.6, 0, 0, 0, 1, gX, gY, gZ, pX, pY, pZ);
     const cellVol = Math.pow(L / N, 3);
     renormalize(psiRe, psiIm, cellVol);
     const norm = calculateNorm(psiRe, psiIm, cellVol);
@@ -439,7 +439,7 @@ describe('quantum.js', () => {
       cx, cy, cz,
       0.6, 0.6, 0.6,
       kx, ky, kz,
-      1.0,
+      1,
       gX, gY, gZ, pX, pY, pZ
     );
 
@@ -512,7 +512,7 @@ describe('quantum.js', () => {
       cx, 0, 0,
       sigma, sigma, sigma,
       kx, 0, 0,
-      1.0,
+      1,
       gX, gY, gZ, pX, pY, pZ
     );
     renormalize(baseRe, baseIm, cellVol);
@@ -527,7 +527,7 @@ describe('quantum.js', () => {
       const psiRe = baseRe.slice();
       const psiIm = baseIm.slice();
       const expVh = new Float32Array(2 * size);
-      buildPotentialExponentials(expVh, V, cap, dt, 3.0);
+      buildPotentialExponentials(expVh, V, cap, dt, 3);
       const sRe = new Float32Array(N);
       const sIm = new Float32Array(N);
       for (let i = 0; i < 900; i++) {
@@ -580,8 +580,8 @@ describe('quantum.js', () => {
   it('createAbsorbingBoundary returns zeros when CAP not possible at small N', () => {
     const N = 3;
     const cap = createAbsorbingBoundary(N, 0.5);
-    for (let i = 0; i < cap.length; i++) {
-      expect(cap[i]).toBe(0);
+    for (const v of cap) {
+      expect(v).toBe(0);
     }
   });
 });

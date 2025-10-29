@@ -15,13 +15,13 @@ function renderControls(overrides = {}) {
     stepsPerFrame: 1, setStepsPerFrame: vi.fn(),
     // absorbing
     absorbFrac: 0.15, setAbsorbFrac: vi.fn(),
-    absorbStrength: 3.0, setAbsorbStrength: vi.fn(),
+    absorbStrength: 3, setAbsorbStrength: vi.fn(),
     // packet
     sigma: 0.6, setSigma: vi.fn(),
-    k0x: 8.0, setK0x: vi.fn(),
-    k0y: 0.0, setK0y: vi.fn(),
-    k0z: 0.0, setK0z: vi.fn(),
-    amp: 1.0, setAmp: vi.fn(),
+    k0x: 8, setK0x: vi.fn(),
+    k0y: 0, setK0y: vi.fn(),
+    k0z: 0, setK0z: vi.fn(),
+    amp: 1, setAmp: vi.fn(),
     x0: -5, setX0: vi.fn(),
     y0: 0, setY0: vi.fn(),
     z0: 0, setZ0: vi.fn(),
@@ -75,7 +75,7 @@ describe('Controls component', () => {
   });
 
   it('parses numeric values from sliders (amplitude)', () => {
-    const p = renderControls({ amp: 1.0 });
+    const p = renderControls({ amp: 1 });
     // find the label text node for amplitude and then the sibling input
     const label = screen.getByText(/amplitude\s*=/i);
     const container = label.closest('div');
@@ -99,8 +99,8 @@ describe('Controls component', () => {
     const input = wrapper?.querySelector('input[type="range"]');
     expect(input).toBeTruthy();
     // dynamic min/max
-    expect(parseFloat(input.getAttribute('min'))).toBeCloseTo(-kMax, 6);
-    expect(parseFloat(input.getAttribute('max'))).toBeCloseTo(kMax, 6);
+    expect(Number.parseFloat(input.getAttribute('min'))).toBeCloseTo(-kMax, 6);
+    expect(Number.parseFloat(input.getAttribute('max'))).toBeCloseTo(kMax, 6);
 
     // onChange clamps to kMax
     fireEvent.change(input, { target: { value: String(kMax * 10) } });

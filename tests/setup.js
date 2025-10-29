@@ -1,9 +1,8 @@
 // Vitest setup: deterministic RNG and jest-dom matchers
 import '@testing-library/jest-dom/vitest';
 import seedrandom from 'seedrandom';
-import { expect } from 'vitest';
+import { expect, afterEach } from 'vitest';
 import { cleanup } from '@testing-library/react';
-import { afterEach } from 'vitest';
 
 // make Math.random deterministic across test runs
 seedrandom('qm3d-fixed-seed', { global: true });

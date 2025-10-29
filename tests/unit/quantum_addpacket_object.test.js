@@ -23,7 +23,7 @@ describe('quantum.js addPacket3D object-arg overload', () => {
 
     const cx = 0, cy = 0, cz = 0;
     const sx = 0.6, sy = 0.6, sz = 0.6;
-    const kx = 0.5, ky = 0.0, kz = 0.0;
+    const kx = 0.5, ky = 0, kz = 0;
 
     // positional call (scale = 1.0)
     addPacket3D(
@@ -31,7 +31,7 @@ describe('quantum.js addPacket3D object-arg overload', () => {
       cx, cy, cz,
       sx, sy, sz,
       kx, ky, kz,
-      1.0,
+      1,
       gX, gY, gZ, pX, pY, pZ
     );
 

@@ -147,7 +147,7 @@ export function makeFFTPlan(n) {
  */
 export function fft1d_p(re, im, inverse, plan) {
     const n = re.length;
-    if (!plan || plan.n !== n) {
+    if (plan?.n !== n) {
         fft1d(re, im, inverse);
         return;
     }
