@@ -77,6 +77,11 @@ export default function QuantumWaveEngine() {
   const recorderRef = useRef(null);
   const recordTimerRef = useRef(null);
 
+  const [fpsDisplay, setFpsDisplay] = useState({ mode: 'running', fps: 0 });
+  const fpsEMARef = useRef(0);
+  const lastTimeRef = useRef(0);
+  const lastUiUpdateRef = useRef(0);
+
   const recTimeLabel = useMemo(() => {
     const s = recordElapsedSec;
     const mm = String(Math.floor(s / 60)).padStart(2, '0');
@@ -283,40 +288,78 @@ export default function QuantumWaveEngine() {
     return undefined;
   }, [isRecording]);
 
+  useEffect(() => {
+    if (typeof document !== 'undefined' && document.hidden) {
+      setFpsDisplay({ mode: 'idle', fps: 0 });
+      lastTimeRef.current = 0;
+      return;
+    }
+    if (running) {
+      setFpsDisplay((prev) => ({ mode: 'running', fps: prev.fps || 0 }));
+    } else {
+      setFpsDisplay({ mode: 'paused', fps: 0 });
+      lastTimeRef.current = 0;
+    }
+  }, [running]);
+
 
   // animation loop
   useEffect(() => {
     let raf = 0;
 
-    const tick = () => {
+    const updateFps = (t) => {
+      if (lastTimeRef.current) {
+        const dtMs = Math.max(0.1, t - lastTimeRef.current);
+        const instFps = 1000 / dtMs;
+        const alpha = 0.15;
+        const ema = fpsEMARef.current ? (fpsEMARef.current + alpha * (instFps - fpsEMARef.current)) : instFps;
+        fpsEMARef.current = ema;
+        const lu = lastUiUpdateRef.current || 0;
+        if (!lu || (t - lu) >= 250) {
+          setFpsDisplay({ mode: 'running', fps: ema });
+          lastUiUpdateRef.current = t;
+        }
+      }
+      lastTimeRef.current = t;
+    };
+
+    const stepPhysics = () => {
+      for (let s = 0; s < stepsPerFrame; s++) {
+        timeStep(
+          psiRe.current,
+          psiIm.current,
+          expVh.current,
+          expK.current,
+          N,
+          scratchRe.current,
+          scratchIm.current
+        );
+      }
+    };
+
+    const recordFrameIfNeeded = () => {
+      const { scene, camera } = threeRefs.current;
+      if (recorderRef.current && scene && camera) {
+        recorderRef.current.renderFrame(scene, camera);
+      }
+    };
+
+    const tick = (now) => {
       if (typeof document !== 'undefined' && document.hidden) {
         raf = 0;
         return;
       }
 
-      const { controls } = threeRefs.current;
-      controls?.update();
+      const t = Number.isFinite(now) ? now : (globalThis.performance?.now?.() ?? Date.now());
 
       if (running) {
-        for (let s = 0; s < stepsPerFrame; s++) {
-          timeStep(
-            psiRe.current,
-            psiIm.current,
-            expVh.current,
-            expK.current,
-            N,
-            scratchRe.current,
-            scratchIm.current
-          );
-        }
+        updateFps(t);
+        const { controls } = threeRefs.current;
+        controls?.update();
+        stepPhysics();
         updateVisualisation();
         renderOnce();
-        {
-          const { scene, camera } = threeRefs.current;
-          if (recorderRef.current && scene && camera) {
-            recorderRef.current.renderFrame(scene, camera);
-          }
-        }
+        recordFrameIfNeeded();
         raf = requestAnimationFrame(tick);
       }
     };
@@ -335,8 +378,14 @@ export default function QuantumWaveEngine() {
     controls?.addEventListener?.('change', onControlsChange);
 
     const onVis = () => {
-      if (typeof document !== 'undefined' && !document.hidden && running && !raf) {
-        raf = requestAnimationFrame(tick);
+      if (typeof document !== 'undefined') {
+        if (document.hidden) {
+          setFpsDisplay({ mode: 'idle', fps: 0 });
+          lastTimeRef.current = 0;
+        } else if (running && !raf) {
+          lastTimeRef.current = 0;
+          raf = requestAnimationFrame(tick);
+        }
       }
     };
 
@@ -345,8 +394,10 @@ export default function QuantumWaveEngine() {
     }
 
     if (running) {
+      lastTimeRef.current = 0;
       raf = requestAnimationFrame(tick);
     } else {
+      setFpsDisplay({ mode: 'paused', fps: 0 });
       renderOnce();
     }
 
@@ -490,6 +541,22 @@ export default function QuantumWaveEngine() {
     }
   }, []);
 
+  const isRunningHud = fpsDisplay.mode === 'running';
+  let fpsLabel;
+  if (isRunningHud) {
+    fpsLabel = `fps ${fpsDisplay.fps.toFixed(1)}`;
+  } else if (fpsDisplay.mode === 'paused') {
+    fpsLabel = 'paused';
+  } else {
+    fpsLabel = 'idle';
+  }
+  const barPct = isRunningHud ? Math.min(100, Math.max(0, (fpsDisplay.fps / 60) * 100)) : 0;
+  let barVar = '--error';
+  if (isRunningHud) {
+    if (fpsDisplay.fps >= 55) barVar = '--success';
+    else if (fpsDisplay.fps >= 30) barVar = '--warning';
+  }
+
   return (
     <div className="w-full max-w-6xl mx-auto p-4 md:p-6">
       <h1 className="text-2xl md:text-3xl font-semibold text-white tracking-tight mb-2">
@@ -501,11 +568,26 @@ export default function QuantumWaveEngine() {
 
       <div className="grid lg:grid-cols-3 gap-4 md:gap-6">
         <div className="lg:col-span-2 card p-4">
-          <div 
-            ref={mountRef} 
-            className="w-full" 
-            style={{ height: "min(60vh, 600px)" }} 
-          />
+          <div className="relative w-full" style={{ height: "min(60vh, 600px)" }}>
+            <div 
+              ref={mountRef} 
+              className="absolute inset-0 w-full h-full" 
+            />
+            <div className="absolute left-2 top-2 z-10 pointer-events-none select-none">
+              <div className="px-2 py-1 rounded-md border text-xs font-medium" style={{ background: "rgba(0,0,0,0.4)", borderColor: "rgba(255,255,255,0.1)" }}>
+                <span className="text-slate-100">{fpsLabel}</span>
+                <div className="mt-1 h-1 w-24 bg-slate-500/30 rounded">
+                  <div 
+                    className="h-1 rounded" 
+                    style={{ 
+                      width: `${barPct}%`,
+                      background: `var(${barVar})`
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
           <div className="flex gap-2 mt-3 flex-wrap">
             <button 
               className={`btn ${running ? 'btn--primary' : 'btn--secondary'}`} 

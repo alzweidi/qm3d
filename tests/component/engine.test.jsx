@@ -88,6 +88,51 @@ describe('QuantumWaveEngine (mocked visualisation)', () => {
     await waitFor(() => expect(cloud.material.uniforms.uShowPhase.value).toBe(0));
   });
 
+  it('renders an FPS overlay in the main view', async () => {
+    render(<QuantumWaveEngine />);
+
+    await waitFor(() => expect(Vis.__getLastPointCloud()).toBeTruthy());
+
+    const mainCard = document.querySelector('.lg\\:col-span-2.card.p-4');
+    expect(mainCard).toBeTruthy();
+    // Should show either an FPS readout or a mode label
+    const hasFps = !!within(mainCard).queryByText(/\bfps\s+\d+\.\d\b/i);
+    const hasMode = !!within(mainCard).queryByText(/\b(paused|idle)\b/i);
+    expect(hasFps || hasMode).toBe(true);
+  });
+
+  it('overlay switches to paused when toggled and to idle when tab is hidden', async () => {
+    render(<QuantumWaveEngine />);
+
+    await waitFor(() => expect(Vis.__getLastPointCloud()).toBeTruthy());
+
+    const mainCard = document.querySelector('.lg\\:col-span-2.card.p-4');
+    const utils = within(mainCard);
+
+    // Pause
+    const toggleBtn = utils.getByText(/pause|run/i);
+    expect(toggleBtn).toBeTruthy();
+    fireEvent.click(toggleBtn); // running -> paused
+
+    await waitFor(() => expect(utils.getByText(/\bpaused\b/i)).toBeTruthy());
+
+    // Simulate tab hidden
+    Object.defineProperty(document, 'hidden', { value: true, configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    await waitFor(() => expect(utils.getByText(/\bidle\b/i)).toBeTruthy());
+
+    // Back to visible and run again
+    Object.defineProperty(document, 'hidden', { value: false, configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    fireEvent.click(utils.getByText(/pause|run/i)); // paused -> running
+
+    await waitFor(() => {
+      const maybeFps = utils.queryByText(/\bfps\s+\d+\.\d\b/i);
+      expect(maybeFps).toBeTruthy();
+    });
+  });
+
   it('default k0x ensures >=8 points-per-wavelength for defaults', async () => {
     const spy = vi.spyOn(Quantum, 'addPacket3D');
     render(<QuantumWaveEngine />);
