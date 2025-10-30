@@ -1,0 +1,67 @@
+name: Bug report
+description: File a bug report to help us improve
+labels: [bug]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out a bug report!
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: What happened? A clear and concise description of the problem.
+      placeholder: When I...
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Provide minimal steps to reproduce. Link to a repo or gist if possible.
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. Scroll down to '...'
+        4. See error
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: App version / commit SHA
+      placeholder: e.g., v0.1.2 or 1a2b3c4
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: OS, Browser (for web), Node version, GPU, any relevant details
+      placeholder: macOS 14, Chrome 128, Node 20, M2 Pro
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      description: Paste logs or attach screenshots (redact secrets).
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues
+          required: true
+        - label: I can reproduce this with the latest main build
+          required: false
