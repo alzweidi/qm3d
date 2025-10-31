@@ -41,7 +41,7 @@ const listeners = new Set();
 
 monitor.setOnSnapshot((snap) => {
   state.snapshot = snap;
-  listeners.forEach((l) => l());
+  for (const l of listeners) l();
 });
 
 function startStop() {
@@ -54,7 +54,14 @@ export const ProfilerStore = {
   subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); },
   getSnapshot() { return state.snapshot; },
   getEnabled() { return state.enabled; },
-  setEnabled(v) { if (state.enabled === !!v) return; state.enabled = !!v; writePersisted(state.enabled); startStop(); listeners.forEach((l) => l()); },
+  setEnabled(v) {
+    const next = !!v;
+    if (state.enabled === next) return;
+    state.enabled = next;
+    writePersisted(state.enabled);
+    startStop();
+    for (const l of listeners) l();
+  },
   toggle() { this.setEnabled(!state.enabled); },
 };
 

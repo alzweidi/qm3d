@@ -9,6 +9,7 @@ export default function ProfilerHUD() {
   if (!enabled || !snap) return null;
 
   const { histogram, minFps, avgFps, maxFps, windowDropped, lifetimeDropped } = snap;
+  const edges = histogram.edges;
   const counts = histogram.counts;
   const bins = counts.length;
   const width = 140;
@@ -26,7 +27,8 @@ export default function ProfilerHUD() {
             const h = Math.round((c / maxCount) * (height - pad * 2));
             const x = pad + i * barW;
             const y = height - pad - h;
-            return <rect key={i} x={x} y={y} width={barW - 1} height={h} fill="rgb(148,163,184)" />;
+            const k = `${edges[i]}-${edges[i+1]}`;
+            return <rect key={k} x={x} y={y} width={barW - 1} height={h} fill="rgb(148,163,184)" />;
           })}
         </svg>
         <div className="mt-1 text-[10px] text-slate-300">dropped {windowDropped} · total {lifetimeDropped}</div>

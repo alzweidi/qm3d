@@ -4,7 +4,7 @@ import { estimateVsyncMs, computeDroppedFrames, buildHistogram } from '../../src
 
 describe('profiler algorithms', () => {
   it('estimateVsyncMs returns a plausible vsync for 60Hz-like samples', () => {
-    const dts = [16.2, 16.5, 16.6, 16.7, 16.8, 16.9, 17.0, 16.3, 16.4];
+    const dts = [16.2, 16.5, 16.6, 16.7, 16.8, 16.9, 17, 16.3, 16.4];
     const vs = estimateVsyncMs(dts);
     expect(vs).toBeGreaterThan(8);
     expect(vs).toBeLessThan(40);
@@ -17,7 +17,7 @@ describe('profiler algorithms', () => {
     const v = 16.67;
     expect(computeDroppedFrames(16.6, v)).toBe(0);
     expect(computeDroppedFrames(33.4, v)).toBe(1);
-    expect(computeDroppedFrames(50.0, v)).toBe(2);
+    expect(computeDroppedFrames(50, v)).toBe(2);
   });
 
   it('buildHistogram buckets values by edges (half-open intervals)', () => {
