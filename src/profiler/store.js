@@ -66,11 +66,11 @@ export const ProfilerStore = {
 };
 
 export function useProfilerSnapshot() {
-  return React.useSyncExternalStore(ProfilerStore.subscribe, ProfilerStore.getSnapshot, ProfilerStore.getSnapshot);
+  return React.useSyncExternalStore(ProfilerStore.subscribe, ProfilerStore.getSnapshot, () => null);
 }
 
 export function useProfilerEnabled() {
-  return React.useSyncExternalStore(ProfilerStore.subscribe, ProfilerStore.getEnabled, ProfilerStore.getEnabled);
+  return React.useSyncExternalStore(ProfilerStore.subscribe, ProfilerStore.getEnabled, () => false);
 }
 
 export function useProfilerControls() {
