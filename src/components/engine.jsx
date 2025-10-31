@@ -726,6 +726,7 @@ export default function QuantumWaveEngine() {
             <p><strong>potentials:</strong> free (v=0 everywhere), plane barrier (step on +x side), box well (cubic trap), spherical well (round trap), harmonic (spring to centre).</p>
             <p><strong>density scale:</strong> multiplies point size after auto-normalisation.</p>
             <p><strong>phase hue:</strong> toggles colour-by-phase.</p>
+            <p><strong>profiler HUD:</strong> small overlay with frame-time histogram and FPS (min/avg/max). shows dropped frames for the recent window and total since enable. toggle in Controls or press <kbd>P</kbd>. state persists across reloads. disabled by default in production unless explicitly enabled.</p>
           </div>
         </details>
       </div>
