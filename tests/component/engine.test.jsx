@@ -75,12 +75,15 @@ describe('QuantumWaveEngine (mocked visualisation)', () => {
     const cloud = Vis.__getLastPointCloud();
     expect(cloud.material.uniforms.uShowPhase.value).toBe(1);
 
-    // Toggle checkbox via Controls (scope to Controls card) using role selector
+    // Toggle the specific 'phase hue' checkbox inside Controls card
     const controlsHeading = screen.getByRole('heading', { name: /controls/i });
     const controlsCard = controlsHeading.closest('.card');
     expect(controlsCard).toBeTruthy();
-    const { getByRole } = within(controlsCard);
-    const checkbox = getByRole('checkbox');
+    const wc = within(controlsCard);
+    const phaseLabel = wc.getByText(/phase hue/i);
+    const row = phaseLabel.closest('div');
+    const inputContainer = row?.nextElementSibling;
+    const checkbox = inputContainer?.querySelector('input[type="checkbox"]');
     expect(checkbox).toBeTruthy();
     fireEvent.click(checkbox);
 

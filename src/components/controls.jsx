@@ -3,6 +3,7 @@
 
 import React from 'react';
 import PropTypes from 'prop-types';
+import { useProfilerControls } from '../profiler/store.js';
 
 /**
  * reusable control component with label and input
@@ -59,6 +60,7 @@ export default function Controls({
   onPresetSphere,
   onPresetHarmonic
 }) {
+  const { enabled: profilerEnabled, setEnabled: setProfilerEnabled } = useProfilerControls();
   return (
     <div className="card p-4">
       <h2 className="section-title text-base mb-2">controls</h2>
@@ -276,6 +278,14 @@ export default function Controls({
           type="checkbox" 
           checked={showPhase} 
           onChange={e => setShowPhase(e.target.checked)} 
+        />
+      </Control>
+
+      <Control label={`profiler hud = ${profilerEnabled ? "on" : "off"}`}>
+        <input 
+          type="checkbox" 
+          checked={profilerEnabled} 
+          onChange={e => setProfilerEnabled(e.target.checked)} 
         />
       </Control>
 

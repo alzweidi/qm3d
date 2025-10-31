@@ -4,9 +4,9 @@ backlog groups potential features and improvements. each item includes a short e
 
 ## top 5 to start next
 
-1. profiler HUD (high)
-   - what: small HUD with frame-time histogram, min/avg/max FPS, dropped-frame counter, toggle via UI.
-   - feasibility: uses existing RAF timestamps; lightweight UI in React. no rendering-path changes.
+1. ~~profiler HUD (high)~~
+   - ~~what: small HUD with frame-time histogram, min/avg/max FPS, dropped-frame counter, toggle via UI.~~
+   - ~~feasibility: uses existing RAF timestamps; lightweight UI in React. no rendering-path changes.~~
 2. capture UI (high)
    - what: integrate `capture.js` into Controls for WebM/MP4 export (duration, FPS, bitrate), progress, cancel.
    - feasibility: `capture.js` is present; add UI wiring and state. Browser encoder constraints apply.
@@ -24,9 +24,9 @@ backlog groups potential features and improvements. each item includes a short e
 
 ## performance & rendering
 
-- profiler HUD (high)
-  - what: HUD with frame-time histogram, min/avg/max FPS, dropped-frame counter, quick toggle.
-  - feasibility: build on existing FPS logic; minimal overhead if sampling window is bounded.
+- ~~profiler HUD (high)~~
+  - ~~what: HUD with frame-time histogram, min/avg/max FPS, dropped-frame counter, quick toggle.~~
+  - ~~feasibility: build on existing FPS logic; minimal overhead if sampling window is bounded.~~
 
 - slice plane tool (medium)
   - what: view planar slices along X/Y/Z; adjust plane index/position.
