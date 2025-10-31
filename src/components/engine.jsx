@@ -31,6 +31,8 @@ import {
   disposeThreeJS
 } from '../rendering/visualisation.js';
 import { captureScreenshot, startRecording } from '../rendering/capture.js';
+import ProfilerHUD from '../profiler/ProfilerHUD.jsx';
+import { useProfilerEnabled } from '../profiler/store.js';
 
 export default function QuantumWaveEngine() {
   // simulation parameters
@@ -69,6 +71,7 @@ export default function QuantumWaveEngine() {
   const [isRecording, setIsRecording] = useState(false);
   const [isCapturingShot, setIsCapturingShot] = useState(false);
   const [recordElapsedSec, setRecordElapsedSec] = useState(0);
+  const profilerEnabled = useProfilerEnabled();
 
   // refs for dom and three.js
   const mountRef = useRef(null);
@@ -573,20 +576,23 @@ export default function QuantumWaveEngine() {
               ref={mountRef} 
               className="absolute inset-0 w-full h-full" 
             />
-            <div className="absolute left-2 top-2 z-10 pointer-events-none select-none">
-              <div className="px-2 py-1 rounded-md border text-xs font-medium" style={{ background: "rgba(0,0,0,0.4)", borderColor: "rgba(255,255,255,0.1)" }}>
-                <span className="text-slate-100">{fpsLabel}</span>
-                <div className="mt-1 h-1 w-24 bg-slate-500/30 rounded">
-                  <div 
-                    className="h-1 rounded" 
-                    style={{ 
-                      width: `${barPct}%`,
-                      background: `var(${barVar})`
-                    }}
-                  />
+            {!profilerEnabled && (
+              <div className="absolute left-2 top-2 z-10 pointer-events-none select-none">
+                <div className="px-2 py-1 rounded-md border text-xs font-medium" style={{ background: "rgba(0,0,0,0.4)", borderColor: "rgba(255,255,255,0.1)" }}>
+                  <span className="text-slate-100">{fpsLabel}</span>
+                  <div className="mt-1 h-1 w-24 bg-slate-500/30 rounded">
+                    <div 
+                      className="h-1 rounded" 
+                      style={{ 
+                        width: `${barPct}%`,
+                        background: `var(${barVar})`
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
+            <ProfilerHUD />
           </div>
           <div className="flex gap-2 mt-3 flex-wrap">
             <button 
