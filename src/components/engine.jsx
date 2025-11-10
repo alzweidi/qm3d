@@ -72,6 +72,12 @@ export default function QuantumWaveEngine() {
   const [isCapturingShot, setIsCapturingShot] = useState(false);
   const [recordElapsedSec, setRecordElapsedSec] = useState(0);
   const profilerEnabled = useProfilerEnabled();
+  const [recordFormat, setRecordFormat] = useState('webm');
+  const supportsMp4 = useMemo(() => {
+    const MR = globalThis.MediaRecorder;
+    const isSupported = MR?.isTypeSupported?.bind(MR);
+    return !!isSupported && (isSupported('video/mp4;codecs=h264') || isSupported('video/mp4;codecs=avc1') || isSupported('video/mp4'));
+  }, []);
 
   // refs for dom and three.js
   const mountRef = useRef(null);
@@ -497,7 +503,10 @@ export default function QuantumWaveEngine() {
     if (!scene || !camera) return;
     const { width, height } = getCaptureSize(1920);
     try {
-      const session = startRecording({ scene, camera, points, width, height, dpr: 1, fps: 60, ssaa: 2, videoBitsPerSecond: 35000000 });
+      const mp4Candidates = ['video/mp4;codecs=h264', 'video/mp4;codecs=avc1', 'video/mp4'];
+      const webmCandidates = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+      const mimeCandidates = (recordFormat === 'mp4' && supportsMp4) ? [...mp4Candidates, ...webmCandidates] : webmCandidates;
+      const session = startRecording({ scene, camera, points, width, height, dpr: 1, fps: 60, ssaa: 2, videoBitsPerSecond: 35000000, mimeCandidates });
       recorderRef.current = session;
       setIsRecording(true);
     } catch (e) {
@@ -517,7 +526,9 @@ export default function QuantumWaveEngine() {
       if (typeof document !== 'undefined') {
         const ts = new Date();
         const pad = (n) => String(n).padStart(2, '0');
-        const filename = `quantum_recording_${ts.getFullYear()}${pad(ts.getMonth() + 1)}${pad(ts.getDate())}_${pad(ts.getHours())}${pad(ts.getMinutes())}${pad(ts.getSeconds())}.webm`;
+        const mime = session.mimeType || (blob?.type || '');
+        const ext = mime.includes('mp4') ? 'mp4' : 'webm';
+        const filename = `quantum_recording_${ts.getFullYear()}${pad(ts.getMonth() + 1)}${pad(ts.getDate())}_${pad(ts.getHours())}${pad(ts.getMinutes())}${pad(ts.getSeconds())}.${ext}`;
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -569,21 +580,71 @@ export default function QuantumWaveEngine() {
         add a 3d gaussian packet, choose a potential, and orbit the volume. points encode |ψ|² by size and arg(ψ) by hue.
       </p>
 
-      <div className="grid lg:grid-cols-3 gap-4 md:gap-6">
-        <div className="lg:col-span-2 card p-4">
+      <div className="grid lg:grid-cols-[minmax(0,220px)_minmax(0,1fr)_minmax(0,280px)] gap-4 md:gap-6 items-start">
+        <div className="card p-4 h-fit self-start">
+          <h2 className="section-title text-base mb-2">capture</h2>
+          <div className="flex flex-col gap-3">
+            <div className="space-y-1.5">
+              <span className="text-sm text-slate-200 font-medium block">screenshot</span>
+              <button 
+                className="btn btn--secondary w-full" 
+                onClick={handleScreenshot}
+                disabled={isCapturingShot}
+              >
+                {isCapturingShot ? "saving..." : "capture screenshot"}
+              </button>
+            </div>
+            <div className="space-y-1.5">
+              <span className="text-sm text-slate-200 font-medium block">recording format</span>
+              <select
+                className="w-full px-2 py-1 text-xs rounded-md border bg-white text-black"
+                value={recordFormat}
+                onChange={(e) => setRecordFormat(e.target.value)}
+                disabled={isRecording}
+              >
+                <option value="webm">webm</option>
+                <option value="mp4" disabled={!supportsMp4}>mp4</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-2">
+              <button 
+                className="btn btn--primary w-full" 
+                onClick={handleStartRecording}
+                disabled={isRecording}
+              >
+                {isRecording ? "recording..." : "start recording"}
+              </button>
+              <button 
+                className="btn btn--secondary w-full" 
+                onClick={handleStopRecording}
+                disabled={!isRecording}
+              >
+                stop recording
+              </button>
+              {isRecording && (
+                <div className="flex items-center gap-2 text-red-500 font-medium">
+                  <span className="w-2 h-2 bg-red-500 rounded-full inline-block" />
+                  <span>REC {recTimeLabel}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="card p-4 self-start">
           <div className="relative w-full" style={{ height: "min(60vh, 600px)" }}>
-            <div 
-              ref={mountRef} 
-              className="absolute inset-0 w-full h-full" 
+            <div
+              ref={mountRef}
+              className="absolute inset-0 w-full h-full"
             />
             {!profilerEnabled && (
               <div className="absolute left-2 top-2 z-10 pointer-events-none select-none">
                 <div className="px-2 py-1 rounded-md border text-xs font-medium" style={{ background: "rgba(0,0,0,0.4)", borderColor: "rgba(255,255,255,0.1)" }}>
                   <span className="text-slate-100">{fpsLabel}</span>
                   <div className="mt-1 h-1 w-24 bg-slate-500/30 rounded">
-                    <div 
-                      className="h-1 rounded" 
-                      style={{ 
+                    <div
+                      className="h-1 rounded"
+                      style={{
                         width: `${barPct}%`,
                         background: `var(${barVar})`
                       }}
@@ -594,83 +655,85 @@ export default function QuantumWaveEngine() {
             )}
             <ProfilerHUD />
           </div>
+
           <div className="flex gap-2 mt-3 flex-wrap">
-            <button 
-              className={`btn ${running ? 'btn--primary' : 'btn--secondary'}`} 
+            <button
+              className={`btn ${running ? 'btn--primary' : 'btn--secondary'}`}
               onClick={() => setRunning(r => !r)}
             >
               {running ? "pause" : "run"}
             </button>
-            <button 
-              className="btn btn--secondary" 
+            <button
+              className="btn btn--secondary"
               onClick={handleResetPsi}
             >
               reset ψ
             </button>
-            <button 
-              className="btn btn--primary" 
+            <button
+              className="btn btn--primary"
               onClick={handleAddPacket}
             >
               add packet
             </button>
-            <button 
-              className="btn btn--ghost" 
+            <button
+              className="btn btn--ghost"
               onClick={handlePresetFree}
             >
               free
             </button>
-            <button 
-              className="btn btn--ghost" 
+            <button
+              className="btn btn--ghost"
               onClick={handlePresetPlaneBarrier}
             >
               plane barrier
             </button>
-            <button 
-              className="btn btn--ghost" 
+            <button
+              className="btn btn--ghost"
               onClick={handlePresetBoxWell}
             >
               box well
             </button>
-            <button 
-              className="btn btn--ghost" 
+            <button
+              className="btn btn--ghost"
               onClick={handlePresetSphere}
             >
               spherical well
             </button>
-            <button 
-              className="btn btn--ghost" 
+            <button
+              className="btn btn--ghost"
               onClick={handlePresetHarmonic}
             >
               harmonic
             </button>
-            <button 
-              className="btn btn--secondary" 
-              onClick={handleScreenshot}
-              disabled={isCapturingShot}
-            >
-              {isCapturingShot ? "saving..." : "screenshot"}
-            </button>
-            <button 
-              className="btn btn--primary" 
-              onClick={handleStartRecording}
-              disabled={isRecording}
-            >
-              {isRecording ? "recording..." : "start recording"}
-            </button>
-            <button 
-              className="btn btn--secondary" 
-              onClick={handleStopRecording}
-              disabled={!isRecording}
-            >
-              stop recording
-            </button>
-            {isRecording && (
-              <div className="flex items-center gap-2 ml-auto">
-                <span className="w-2 h-2 bg-red-500 rounded-full inline-block" />
-                <span className="text-red-500 font-medium">REC {recTimeLabel}</span>
-              </div>
-            )}
           </div>
+        </div>
+
+        <div className="card p-3 md:p-4 text-slate-400 text-xs leading-relaxed space-y-2 self-start mt-3 lg:col-start-2 lg:row-start-2">
+          <p>
+            tips: keep n=32 for smooth interactivity. use smaller <code>dt</code> for accuracy. the fft implies periodic boundaries. the cap mitigates wrap-around by damping outgoing flux. harmonic and spherical wells are good sanity checks (bound states, breathing modes).
+          </p>
+          <details className="mt-2">
+            <summary className="cursor-pointer text-slate-300 hover:text-white font-medium">help: controls explained</summary>
+            <div className="mt-2 text-slate-400 prose prose-sm prose-invert max-w-none">
+              <p>mouse/touch navigation: left-drag orbits, wheel/trackpad zooms, right-drag pans. this only moves the camera, not the physics.</p>
+              <p>points encode probability density and phase: size ∝ |ψ|, colour hue maps phase arg(ψ) from -π to π around the colour wheel.</p>
+              <p><strong>grid n (32/64):</strong> samples along x, y, z (n³ total). larger n resolves finer structure but needs more memory/compute.</p>
+              <p><strong>domain l:</strong> physical side length of the cube. spatial step is dx = l/n. increasing l makes the same packet look smaller.</p>
+              <p><strong>dt scale:</strong> sets time step via dt = dtScale × dx². smaller dt reduces splitting error.</p>
+              <p><strong>steps per frame:</strong> how many physics steps between renders.</p>
+              <p><strong>periodic boundaries:</strong> the fft method is periodic. waves exiting one face re-enter at the opposite face unless absorbed (see cap).</p>
+              <p><strong>σ (sigma):</strong> spatial width of gaussian packet. smaller σ spreads faster (fourier uncertainty trade-off).</p>
+              <p><strong>centre x/y/z:</strong> where you drop the packet inside the box (clamped to ±l/2).</p>
+              <p><strong>k0x/y/z:</strong> wave-vector components. set the direction and speed the blob travels.</p>
+              <p><strong>amplitude:</strong> linear scale of the packet you add.</p>
+              <p><strong>cap width:</strong> thickness of the absorbing sponge near the box faces. reduces wrap-around reflections.</p>
+              <p><strong>cap strength:</strong> how strongly the cap damps outgoing flux each step. too high can nibble the interior.</p>
+              <p><strong>potentials:</strong> free (v=0 everywhere), plane barrier (step on +x side), box well (cubic trap), spherical well (round trap), harmonic (spring to centre).</p>
+              <p><strong>density scale:</strong> multiplies point size after auto-normalisation.</p>
+              <p><strong>phase hue:</strong> toggles colour-by-phase.</p>
+              <p><strong>profiler HUD:</strong> small overlay with frame-time histogram and FPS (min/avg/max). shows dropped frames for the recent window and total since enable. toggle in Controls or press <kbd>P</kbd>. state persists across reloads. disabled by default in production unless explicitly enabled.</p>
+            </div>
+          </details>
         </div>
 
         <Controls
@@ -692,43 +755,7 @@ export default function QuantumWaveEngine() {
           z0={z0} setZ0={setZ0}
           densityScale={densityScale} setDensityScale={setDensityScale}
           showPhase={showPhase} setShowPhase={setShowPhase}
-          running={running} setRunning={setRunning}
-          onAddPacket={handleAddPacket}
-          onResetPsi={handleResetPsi}
-          onPresetFree={handlePresetFree}
-          onPresetPlaneBarrier={handlePresetPlaneBarrier}
-          onPresetBoxWell={handlePresetBoxWell}
-          onPresetSphere={handlePresetSphere}
-          onPresetHarmonic={handlePresetHarmonic}
         />
-      </div>
-
-      <div className="card p-3 md:p-4 text-slate-400 text-xs mt-4 leading-relaxed space-y-2">
-        <p>
-          tips: keep n=32 for smooth interactivity. use smaller <code>dt</code> for accuracy. the fft implies periodic boundaries. the cap mitigates wrap-around by damping outgoing flux. harmonic and spherical wells are good sanity checks (bound states, breathing modes).
-        </p>
-        <details className="mt-2">
-          <summary className="cursor-pointer text-slate-300 hover:text-white font-medium">help: controls explained</summary>
-          <div className="mt-2 text-slate-400 prose prose-sm prose-invert max-w-none">
-            <p>mouse/touch navigation: left-drag orbits, wheel/trackpad zooms, right-drag pans. this only moves the camera, not the physics.</p>
-            <p>points encode probability density and phase: size ∝ |ψ|, colour hue maps phase arg(ψ) from -π to π around the colour wheel.</p>
-            <p><strong>grid n (32/64):</strong> samples along x, y, z (n³ total). larger n resolves finer structure but needs more memory/compute.</p>
-            <p><strong>domain l:</strong> physical side length of the cube. spatial step is dx = l/n. increasing l makes the same packet look smaller.</p>
-            <p><strong>dt scale:</strong> sets time step via dt = dtScale × dx². smaller dt reduces splitting error.</p>
-            <p><strong>steps per frame:</strong> how many physics steps between renders.</p>
-            <p><strong>periodic boundaries:</strong> the fft method is periodic. waves exiting one face re-enter at the opposite face unless absorbed (see cap).</p>
-            <p><strong>σ (sigma):</strong> spatial width of gaussian packet. smaller σ spreads faster (fourier uncertainty trade-off).</p>
-            <p><strong>centre x/y/z:</strong> where you drop the packet inside the box (clamped to ±l/2).</p>
-            <p><strong>k0x/y/z:</strong> wave-vector components. set the direction and speed the blob travels.</p>
-            <p><strong>amplitude:</strong> linear scale of the packet you add.</p>
-            <p><strong>cap width:</strong> thickness of the absorbing sponge near the box faces. reduces wrap-around reflections.</p>
-            <p><strong>cap strength:</strong> how strongly the cap damps outgoing flux each step. too high can nibble the interior.</p>
-            <p><strong>potentials:</strong> free (v=0 everywhere), plane barrier (step on +x side), box well (cubic trap), spherical well (round trap), harmonic (spring to centre).</p>
-            <p><strong>density scale:</strong> multiplies point size after auto-normalisation.</p>
-            <p><strong>phase hue:</strong> toggles colour-by-phase.</p>
-            <p><strong>profiler HUD:</strong> small overlay with frame-time histogram and FPS (min/avg/max). shows dropped frames for the recent window and total since enable. toggle in Controls or press <kbd>P</kbd>. state persists across reloads. disabled by default in production unless explicitly enabled.</p>
-          </div>
-        </details>
       </div>
     </div>
   );

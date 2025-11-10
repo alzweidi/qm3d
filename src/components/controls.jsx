@@ -49,16 +49,6 @@ export default function Controls({
   // visualisation
   densityScale, setDensityScale,
   showPhase, setShowPhase,
-  
-  // control actions
-  running, setRunning,
-  onAddPacket,
-  onResetPsi,
-  onPresetFree,
-  onPresetPlaneBarrier,
-  onPresetBoxWell,
-  onPresetSphere,
-  onPresetHarmonic
 }) {
   const { enabled: profilerEnabled, setEnabled: setProfilerEnabled } = useProfilerControls();
   return (
@@ -288,71 +278,6 @@ export default function Controls({
           onChange={e => setProfilerEnabled(e.target.checked)} 
         />
       </Control>
-
-      <div className="divider my-3" />
-
-      {/* action buttons */}
-      <div className="space-y-2">
-        <div className="flex gap-2 flex-wrap">
-          <button 
-            className="btn btn--secondary" 
-            onClick={() => setRunning(r => !r)}
-          >
-            {running ? "pause" : "run"}
-          </button>
-          
-          <button 
-            className="btn btn--secondary" 
-            onClick={onResetPsi}
-          >
-            reset ψ
-          </button>
-          
-          <button 
-            className="btn btn--primary" 
-            onClick={onAddPacket}
-          >
-            add packet
-          </button>
-        </div>
-        
-        <div className="flex gap-2 flex-wrap">
-          <button 
-            className="btn btn--ghost" 
-            onClick={onPresetFree}
-          >
-            free
-          </button>
-          
-          <button 
-            className="btn btn--ghost" 
-            onClick={onPresetPlaneBarrier}
-          >
-            plane barrier
-          </button>
-          
-          <button 
-            className="btn btn--ghost" 
-            onClick={onPresetBoxWell}
-          >
-            box well
-          </button>
-          
-          <button 
-            className="btn btn--ghost" 
-            onClick={onPresetSphere}
-          >
-            spherical well
-          </button>
-          
-          <button 
-            className="btn btn--ghost" 
-            onClick={onPresetHarmonic}
-          >
-            harmonic
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
@@ -399,15 +324,4 @@ Controls.propTypes = {
   setDensityScale: PropTypes.func.isRequired,
   showPhase: PropTypes.bool.isRequired,
   setShowPhase: PropTypes.func.isRequired,
-
-  // control actions
-  running: PropTypes.bool.isRequired,
-  setRunning: PropTypes.func.isRequired,
-  onAddPacket: PropTypes.func.isRequired,
-  onResetPsi: PropTypes.func.isRequired,
-  onPresetFree: PropTypes.func.isRequired,
-  onPresetPlaneBarrier: PropTypes.func.isRequired,
-  onPresetBoxWell: PropTypes.func.isRequired,
-  onPresetSphere: PropTypes.func.isRequired,
-  onPresetHarmonic: PropTypes.func.isRequired,
 };
