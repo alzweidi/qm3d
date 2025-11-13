@@ -20,6 +20,7 @@ import {
   timeStep,
   addPacket3D,
   renormalize,
+  calculateNorm,
 } from '../physics/quantum.js';
 import {
   initialiseThreeJS,
@@ -109,6 +110,11 @@ export default function QuantumWaveEngine() {
   const expK = useRef(new Float32Array(2 * size));
   const expVh = useRef(new Float32Array(2 * size));
   const capS2Ref = useRef(new Float32Array(size));
+  const capActiveRef = useRef(false);
+  const normFrameCounterRef = useRef(0);
+  const normCheckEveryRef = useRef(60);
+  const normThresholdRef = useRef(1e-4);
+  const autoRenormRef = useRef(true);
 
   // scratch arrays for computations
   const gXRef = useRef(new Float32Array(N));
@@ -228,9 +234,20 @@ export default function QuantumWaveEngine() {
     prevKDefaultRef.current = kDefault;
   }, [kDefault]);
 
+  const absorbStrengthRef = useRef(absorbStrength);
+  useEffect(() => {
+    absorbStrengthRef.current = absorbStrength;
+  }, [absorbStrength]);
+
   // update absorbing boundaries
   useEffect(() => {
     capS2Ref.current = createAbsorbingBoundary(N, absorbFrac);
+    let hasCap = false;
+    const cap = capS2Ref.current;
+    for (let i = 0; i < cap.length; i++) {
+      if (cap[i] > 0) { hasCap = true; break; }
+    }
+    capActiveRef.current = hasCap;
     rebuildPotentialExponentials();
   }, [N, absorbFrac, rebuildPotentialExponentials]);
 
@@ -360,6 +377,20 @@ export default function QuantumWaveEngine() {
         const { controls } = threeRefs.current;
         controls?.update();
         stepPhysics();
+
+        normFrameCounterRef.current = (normFrameCounterRef.current + 1) % Math.max(1, normCheckEveryRef.current);
+        if (normFrameCounterRef.current === 0) {
+          const isCapActive = (absorbStrengthRef.current > 0) && capActiveRef.current;
+          if (autoRenormRef.current && !isCapActive) {
+            const cellVol = dx * dx * dx;
+            const norm = calculateNorm(psiRe.current, psiIm.current, cellVol);
+            const relErr = Math.abs(norm - 1);
+            if (relErr > normThresholdRef.current) {
+              renormalize(psiRe.current, psiIm.current, cellVol);
+            }
+          }
+        }
+
         updateVisualisation();
         renderOnce();
         recordFrameIfNeeded();
@@ -411,7 +442,7 @@ export default function QuantumWaveEngine() {
         document.removeEventListener('visibilitychange', onVis);
       }
     };
-  }, [running, stepsPerFrame, dt, densityScale, showPhase, N, updateVisualisation, renderOnce, renderDirect]);
+  }, [running, stepsPerFrame, dt, densityScale, showPhase, N, dx, updateVisualisation, renderOnce, renderDirect]);
 
   // potential preset functions
   function handlePresetFree() {
