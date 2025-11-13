@@ -135,9 +135,27 @@ export async function captureScreenshot({ scene, camera, points, renderer, width
   const rtW = Math.max(1, Math.ceil(width * safeScale));
   const rtH = Math.max(1, Math.ceil(height * safeScale));
   const rt = new THREE.WebGLRenderTarget(rtW, rtH, { depthBuffer: true, stencilBuffer: false });
+  // ensure render target stores sRGB so readback matches on-screen appearance
+  try {
+    if (rt && rt.texture) {
+      if (THREE?.SRGBColorSpace && 'colorSpace' in rt.texture) {
+        rt.texture.colorSpace = THREE.SRGBColorSpace;
+      } else if (THREE?.sRGBEncoding && 'encoding' in rt.texture) {
+        // fallback for older three versions
+        rt.texture.encoding = THREE.sRGBEncoding;
+      }
+    }
+  } catch (_) { /* no-op */ }
+
+  // Option A diagnostic: force pixel ratio = 1 for the main renderer during RT render
+  const prevDpr = renderer.getPixelRatio?.();
+  if (typeof renderer.setPixelRatio === 'function') renderer.setPixelRatio(1);
 
   const maxPs = getMaxPointSize(renderer);
-  const prevUniforms = setUniformsForOffscreen(points, renderer, camClone, maxPs, safeScale);
+  // match on-screen sprite sizing: use ORIGINAL screen DPR scaled by internal safeScale
+  const screenDpr = (prevDpr !== undefined ? prevDpr : (globalThis.window?.devicePixelRatio ?? 1));
+  const effectiveDpr = screenDpr * safeScale;
+  const prevUniforms = setUniformsForOffscreen(points, renderer, camClone, maxPs, effectiveDpr);
   const prevTarget = renderer.getRenderTarget ? renderer.getRenderTarget() : null;
   const prevScissor = renderer.getScissor ? renderer.getScissor(new THREE.Vector4()) : null;
   const prevScissorTest = renderer.getScissorTest ? renderer.getScissorTest() : false;
@@ -169,6 +187,10 @@ export async function captureScreenshot({ scene, camera, points, renderer, width
     if (prevViewport) renderer.setViewport(prevViewport);
     if (prevScissor) renderer.setScissor(prevScissor);
     renderer.setScissorTest(prevScissorTest);
+    // restore original pixel ratio
+    if (prevDpr !== undefined && typeof renderer.setPixelRatio === 'function') {
+      renderer.setPixelRatio(prevDpr);
+    }
     if (typeof rt.dispose === 'function') rt.dispose();
   }
   const outBlob = await canvasToBlob(outCanvas);
