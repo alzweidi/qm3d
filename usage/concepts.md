@@ -25,6 +25,7 @@ mostly because many points overlap (additive blending). Colour shows the local
 wave’s angle.
 
 Sources:
+
 - MIT OCW: Probability density and current
 - MIT OCW Quantum I (lecture notes)
 
@@ -58,6 +59,7 @@ In plain words: Think “wrap‑around world”. Turn on the sponge (CAP) to sto
 echoes.
 
 Sources:
+
 - Bao (2003): Time‑splitting spectral discretisations (SIAM)
 - MIT 18.336: Spectral methods (periodic domains)
 
@@ -85,6 +87,7 @@ In plain words: How strong the new blob is. Adding many blobs stacks them. The
 sponge can slowly fade them.
 
 Sources:
+
 - MIT Chemistry 5.73: Wavepackets and spreading
 - Group velocity primer (UT Austin)
 
@@ -95,13 +98,22 @@ the grid). Reduces wrap‑around reflections.
 
 In plain words: How deep the edge‑sponge is.
 
+set width = 0 to disable the CAP entirely (undamped periodic boundaries). When
+enabled (width > 0), the implementation enforces a minimum thickness of four
+grid cells for stability and better absorption, even if the chosen fraction
+would be thinner.
+
 Strength: How strongly the CAP damps outgoing flux each step (a complex
 absorbing potential). Too high can nibble the interior.
 
 In plain words: How aggressive the sponge is. Crank it if you still see echoes,
 but don’t overdo it.
 
+set strength = 0 to disable damping. The CAP is effectively active only when
+both width > 0 and strength > 0.
+
 Sources:
+
 - Muga et al., Complex absorbing potentials (Phys. Rep. 2004)
 - CAP method (arXiv overview)
 
@@ -151,6 +163,7 @@ past the hardware cap.
 In plain words: If points won’t get any bigger, your GPU hit its limit.
 
 Sources:
+
 - MDN: getParameter and constants (ALIASED_POINT_SIZE_RANGE)
 - MDN: WebGL constants
 
@@ -194,6 +207,7 @@ spread. Larger |k0| moves faster (free case).
 In plain words: Tight blobs blur quickly. Bigger k makes them travel faster.
 
 Sources:
+
 - MIT OCW: Wavepackets
 - Bao (2003) — SIAM
 - MIT 18.336 — Spectral (periodic)

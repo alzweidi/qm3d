@@ -232,10 +232,10 @@ export default function Controls({
       {/* absorbing boundaries */}
       <h3 className="section-title text-sm mb-1">absorbing boundaries (cap)</h3>
       
-      <Control label={`width = ${(absorbFrac*100).toFixed(0)}%`}>
+      <Control label={`width = ${(absorbFrac*100).toFixed(0)}% (0 = off)`}>
         <input 
           type="range" 
-          min={0.05} 
+          min={0} 
           max={0.3} 
           step={0.01} 
           value={absorbFrac} 
@@ -244,10 +244,10 @@ export default function Controls({
         />
       </Control>
       
-      <Control label={`strength = ${absorbStrength.toFixed(2)}`}>
+      <Control label={`strength = ${absorbStrength.toFixed(2)} (0 = off)`}>
         <input 
           type="range" 
-          min={1} 
+          min={0} 
           max={8} 
           step={0.1} 
           value={absorbStrength} 
