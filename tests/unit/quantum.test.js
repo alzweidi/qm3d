@@ -584,4 +584,16 @@ describe('quantum.js', () => {
       expect(v).toBe(0);
     }
   });
+
+  it('createAbsorbingBoundary returns all zeros when absorbFrac <= 0', () => {
+    const N = 8;
+    let cap0 = createAbsorbingBoundary(N, 0);
+    for (const v of cap0) {
+      expect(v).toBe(0);
+    }
+    let capNeg = createAbsorbingBoundary(N, -0.1);
+    for (const v of capNeg) {
+      expect(v).toBe(0);
+    }
+  });
 });

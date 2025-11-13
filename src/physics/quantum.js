@@ -105,6 +105,9 @@ export function buildPotentialExponentials(expVh, V, capS2, dt, absorbStrength) 
  */
 export function createAbsorbingBoundary(N, absorbFrac) {
   const cap = new Float32Array(N*N*N);
+  if (!(absorbFrac > 0)) {
+    return cap;
+  }
   let nAbs = Math.floor(absorbFrac * N);
   nAbs = Math.max(4, nAbs);
   nAbs = Math.min(nAbs, Math.floor((N - 2) / 2));
