@@ -596,4 +596,18 @@ describe('quantum.js', () => {
       expect(v).toBe(0);
     }
   });
+
+  it('createKSpaceArrays throws for non power-of-two N (fast validation)', () => {
+    expect(() => createKSpaceArrays(12, 10)).toThrow(/power of two/i);
+  });
+
+  it('timeStep throws early for N < 2 (fast validation)', () => {
+    const psiRe = new Float32Array(1);
+    const psiIm = new Float32Array(1);
+    const expVh = new Float32Array(2);
+    const expK = new Float32Array(2);
+    const sRe = new Float32Array(1);
+    const sIm = new Float32Array(1);
+    expect(() => timeStep(psiRe, psiIm, expVh, expK, 1, sRe, sIm)).toThrow(/power of two/i);
+  });
 });

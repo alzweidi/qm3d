@@ -19,6 +19,12 @@ export function createCoordinateArray(N, L) {
   return arr;
 }
 
+function validateGridSize(N) {
+  if (!(N >= 2) || ((N & (N - 1)) !== 0)) {
+    throw new Error(`grid size N must be a power of two (>=2); got N=${N}`);
+  }
+}
+
 /**
  * create k-space arrays for kinetic energy operator
  * @param {number} N - grid size
@@ -26,6 +32,7 @@ export function createCoordinateArray(N, L) {
  * @returns {Object} object containing kx2, ky2, kz2 arrays
  */
 export function createKSpaceArrays(N, L) {
+  validateGridSize(N);
   const kOf = (n) => {
     const m = (n <= N/2-1) ? n : n - N; 
     return (2*Math.PI/L) * m;
@@ -192,6 +199,7 @@ export function kineticFullStep(psiRe, psiIm, expK, N, scratchRe, scratchIm) {
  * @param {Float32Array} scratchIm - scratch array for FFT
  */
 export function timeStep(psiRe, psiIm, expVh, expK, N, scratchRe, scratchIm) {
+  validateGridSize(N);
   potentialHalfStep(psiRe, psiIm, expVh);
   kineticFullStep(psiRe, psiIm, expK, N, scratchRe, scratchIm);
   potentialHalfStep(psiRe, psiIm, expVh);
