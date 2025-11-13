@@ -66,7 +66,7 @@ open the printed localhost url. vite will hot‑reload when you tweak code.
 - **k‑grid:** centred using fft ordering; `k = 2π m / L` with `m ∈ [−n/2,…,n/2−1]`.
 - **kinetic:** `θ_k = −½ k² dt` baked into a complex exp table per cell.
 - **potential:** half‑step phase with optional cap decay `exp(−½·strength·s²·dt)`.
-- **cap:** smooth polynomial in a shell of width `absorb_frac × n` on each face.
+- **cap:** smooth polynomial in a shell of width `absorb_frac × n` on each face (set width or strength to zero to disable).
 - **normalisation:** renormalise after packet add; thereafter norm naturally drifts only where cap damps outgoing flux.
 - **boundaries:** periodic because fft; the cap exists to hide that.
 - **units:** nondimensional (ħ = m = 1). `x` is in `[−l/2,l/2]`; energies match your chosen `V` scale.

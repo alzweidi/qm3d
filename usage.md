@@ -91,10 +91,10 @@ the application consists of a 3d visualisation canvas and a control panel. here'
 
 ### absorbing boundaries (cap)
 
-- **width**: fraction of the domain edge used for absorption (5% to 30%).
-- **strength**: how strongly waves are damped at boundaries (1 to 8).
+- **width**: fraction of the domain edge used for absorption (0% to 30%). set to 0 for undamped periodic boundaries.
+- **strength**: how strongly waves are damped at boundaries (0 to 8). set to 0 to disable damping even if the width slider is non-zero.
 
-this prevents unwanted reflections from the periodic boundaries imposed by the fft.
+the cap only engages when both width and strength are positive. use it to suppress unwanted reflections from the periodic boundaries imposed by the fft.
 
 ### tips for effective use
 
