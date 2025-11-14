@@ -23,6 +23,12 @@ describe('quantum.js', () => {
     expect(Array.from(arr)).toEqualCloseTo([-0.75, -0.25, 0.25, 0.75], 10);
   });
 
+  it('createCoordinateArray throws on non-positive or non-finite L', () => {
+    expect(() => createCoordinateArray(4, 0)).toThrow(/finite positive/);
+    expect(() => createCoordinateArray(4, -1)).toThrow(/finite positive/);
+    expect(() => createCoordinateArray(4, Infinity)).toThrow(/finite positive/);
+  });
+
   it('renormalize after addPacket keeps norm ≈ 1 over time with CAP off', () => {
     const N = 16;
     const L = 8;
@@ -135,6 +141,12 @@ describe('quantum.js', () => {
     expect(Array.from(kz2)).toEqualCloseTo(expectedSq, 10);
   });
 
+  it('createKSpaceArrays throws on invalid L', () => {
+    expect(() => createKSpaceArrays(32, 0)).toThrow(/finite positive/);
+    expect(() => createKSpaceArrays(32, -2)).toThrow(/finite positive/);
+    expect(() => createKSpaceArrays(32, NaN)).toThrow(/finite positive/);
+  });
+
   it('buildKineticExponentials writes correct complex exponentials', () => {
     const N = 4;
     const L = 2 * Math.PI;
@@ -184,6 +196,18 @@ describe('quantum.js', () => {
     // angle still follows theta
     const ang = Math.atan2(expVh[j + 1], expVh[j]);
     expect(ang).toBeCloseTo(theta, 7); // allow some wrap/precision tolerance
+  });
+
+  it('buildPotentialExponentials throws when buffer lengths are inconsistent', () => {
+    const len = 8;
+    const V = new Float32Array(len);
+    const dt = 0.1;
+    const expShort = new Float32Array(2 * len - 2);
+    expect(() => buildPotentialExponentials(expShort, V, null, dt, 0)).toThrow(/expVh.length === 2 \* V.length/);
+
+    const expVh = new Float32Array(2 * len);
+    const capBad = new Float32Array(len - 1);
+    expect(() => buildPotentialExponentials(expVh, V, capBad, dt, 1)).toThrow(/capS2.length === V.length/);
   });
 
   it('createAbsorbingBoundary interior is zero and edges positive/symmetric', () => {

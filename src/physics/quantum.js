@@ -3,6 +3,12 @@
 
 import { fft3d } from './fft.js';
 
+function validateDomainSize(L, caller) {
+  if (!Number.isFinite(L) || !(L > 0)) {
+    throw new Error(`${caller} requires L to be a finite positive number; got L=${L}`);
+  }
+}
+
 /**
  * create coordinate array for the simulation grid
  * @param {number} N - grid size
@@ -10,6 +16,7 @@ import { fft3d } from './fft.js';
  * @returns {Float32Array} coordinate array
  */
 export function createCoordinateArray(N, L) {
+  validateDomainSize(L, 'createCoordinateArray');
   const arr = new Float32Array(N);
   const s = L / N; 
   const off = -L/2 + s * 0.5;
@@ -32,6 +39,7 @@ function validateGridSize(N) {
  * @returns {Object} object containing kx2, ky2, kz2 arrays
  */
 export function createKSpaceArrays(N, L) {
+  validateDomainSize(L, 'createKSpaceArrays');
   validateGridSize(N);
   const kOf = (n) => {
     const m = (n <= N/2-1) ? n : n - N; 
@@ -91,6 +99,12 @@ export function buildKineticExponentials(expK, kArrays, N, dt) {
 export function buildPotentialExponentials(expVh, V, capS2, dt, absorbStrength) {
   const half = -0.5 * dt;
   const len = V.length;
+  if (expVh.length !== (len << 1)) {
+    throw new Error(`buildPotentialExponentials requires expVh.length === 2 * V.length; got V.length=${len}, expVh.length=${expVh.length}`);
+  }
+  if (capS2 != null && capS2.length !== len) {
+    throw new Error(`buildPotentialExponentials requires capS2.length === V.length when capS2 is provided; got V.length=${len}, capS2.length=${capS2.length}`);
+  }
   
   const useCap = !!capS2 && absorbStrength > 0;
   for (let i = 0; i < len; i++) {
