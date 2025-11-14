@@ -390,6 +390,32 @@ describe('quantum.js', () => {
     expect(ratioOK).toBe(true);
   });
 
+  it('addPacket3D throws for non-positive widths', () => {
+    const N = 8;
+    const L = 8;
+    const coord = createCoordinateArray(N, L);
+
+    const size = N * N * N;
+    const psiRe = new Float32Array(size);
+    const psiIm = new Float32Array(size);
+
+    const gX = new Float32Array(N);
+    const gY = new Float32Array(N);
+    const gZ = new Float32Array(N);
+    const pX = new Float32Array(N);
+    const pY = new Float32Array(N);
+    const pZ = new Float32Array(N);
+
+    expect(() => addPacket3D(
+      psiRe, psiIm, coord, N,
+      0, 0, 0,
+      0, 0.6, 0.6,
+      0, 0, 0,
+      1,
+      gX, gY, gZ, pX, pY, pZ
+    )).toThrow(/positive widths/i);
+  });
+
   it('renormalize brings norm to ~1, zero state remains zero', () => {
     const N = 8;
     const L = 8;

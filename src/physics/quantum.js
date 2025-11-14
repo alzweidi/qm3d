@@ -235,6 +235,9 @@ export function addPacket3D(...args) {
   } else {
     [psiRe, psiIm, coord, N, cx, cy, cz, sx, sy, sz, kx, ky, kz, scale, gX, gY, gZ, pX, pY, pZ] = args;
   }
+  if (!(sx > 0 && sy > 0 && sz > 0)) {
+    throw new Error(`addPacket3D requires positive widths sx, sy, sz; got sx=${sx}, sy=${sy}, sz=${sz}`);
+  }
   const s2x = sx*sx, s2y = sy*sy, s2z = sz*sz;
   
   // compute 1D gaussians and phases
