@@ -110,28 +110,22 @@ describe('fft.js', () => {
 
   it('runFFTSelfTests executes without throwing', () => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const assertSpy = vi.spyOn(console, 'assert').mockImplementation(() => {});
-    runFFTSelfTests();
-    // if assertions fail, console.assert would be called with false; we still treat this as non-throwing
-    expect(assertSpy).toHaveBeenCalled();
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(() => runFFTSelfTests()).not.toThrow();
+    expect(log).toHaveBeenCalled();
     log.mockRestore();
-    warn.mockRestore();
-    assertSpy.mockRestore();
+    err.mockRestore();
   });
 
-  it('runFFTSelfTests handles internal failure (catch path)', () => {
+  it('runFFTSelfTests propagates internal failure (fail hard)', () => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const assertSpy = vi.spyOn(console, 'assert').mockImplementation(() => {});
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
     const rnd = vi.spyOn(Math, 'random').mockImplementation(() => { throw new Error('rand fail'); });
-    // should swallow the error and hit catch branch (console.warn)
-    runFFTSelfTests();
-    expect(warn).toHaveBeenCalled();
+    expect(() => runFFTSelfTests()).toThrow();
+    expect(err).toHaveBeenCalled();
     // cleanup
     rnd.mockRestore();
     log.mockRestore();
-    warn.mockRestore();
-    assertSpy.mockRestore();
+    err.mockRestore();
   });
 });

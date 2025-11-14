@@ -275,7 +275,7 @@ export function fft3d(re, im, N, inverse, lineRe, lineIm) {
  * verifies round-trip accuracy and complex arithmetic
  */
 export function runFFTSelfTests() {
-    try {
+  try {
         // test 1d fft round-trip
         const n = 32;
         const re = new Float32Array(n);
@@ -296,16 +296,20 @@ export function runFFTSelfTests() {
             err += dr * dr + di * di;
             norm += r1[i] * r1[i] + i1[i] * i1[i];
         }
-        console.assert(Math.sqrt(err / (norm + 1e-12)) < 1e-5, "FFT(1D) round‑trip error too large");
+        const e1 = Math.sqrt(err / (norm + 1e-12));
+        /* c8 ignore next */
+        if (e1 >= 1e-5) throw new Error("FFT(1D) round‑trip error too large");
 
         // test complex multiplication
         const cm = cMul(1, 2, 3, 4);
-        console.assert(Math.abs(cm[0] + 5) < 1e-6 && Math.abs(cm[1] - 10) < 1e-6, "cMul incorrect");
+        /* c8 ignore next */
+        if (Math.abs(cm[0] + 5) >= 1e-6 || Math.abs(cm[1] - 10) >= 1e-6) throw new Error("cMul incorrect");
 
         // test complex exponential
         const dtt = 0.01, Vc = 2;
         const eh = cExp(-0.5 * dtt * Vc);
-        console.assert(Math.abs(eh[0] * eh[0] + eh[1] * eh[1] - 1) < 1e-6, "exp phase not unit magnitude");
+        /* c8 ignore next */
+        if (Math.abs(eh[0] * eh[0] + eh[1] * eh[1] - 1) >= 1e-6) throw new Error("exp phase not unit magnitude");
 
         // test 3d fft round-trip
         const NN = 8;
@@ -330,10 +334,13 @@ export function runFFTSelfTests() {
             e3 += dr * dr + di * di;
             n3 += Re3b[i] * Re3b[i] + Im3b[i] * Im3b[i];
         }
-        console.assert(Math.sqrt(e3 / (n3 + 1e-12)) < 1e-5, "FFT(3D) round‑trip error too large");
+        const e3rel = Math.sqrt(e3 / (n3 + 1e-12));
+        /* c8 ignore next */
+        if (e3rel >= 1e-5) throw new Error("FFT(3D) round‑trip error too large");
 
         console.log("✓ FFT self-tests passed");
     } catch (e) {
-        console.warn("FFT self‑tests failed:", e);
-    }
+        console.error("FFT self‑tests failed:", e);
+        throw e;
+  }
 }
