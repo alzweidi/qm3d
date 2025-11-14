@@ -148,6 +148,12 @@ export function createAbsorbingBoundary(N, absorbFrac) {
  */
 export function potentialHalfStep(psiRe, psiIm, expVh) {
   const len = psiRe.length;
+  if (psiIm.length !== len) {
+    throw new Error(`potentialHalfStep requires psiRe and psiIm to have the same length; got psiRe.length=${len}, psiIm.length=${psiIm.length}`);
+  }
+  if (expVh.length !== (len << 1)) {
+    throw new Error(`potentialHalfStep requires expVh.length === 2 * psi length; got psi length=${len}, expVh.length=${expVh.length}`);
+  }
   for (let i = 0; i < len; i++) {
     const pr = psiRe[i], pi = psiIm[i];
     const j = i << 1; 
@@ -169,11 +175,25 @@ export function potentialHalfStep(psiRe, psiIm, expVh) {
  * @param {Float32Array} scratchIm - Scratch array for FFT
  */
 export function kineticFullStep(psiRe, psiIm, expK, N, scratchRe, scratchIm) {
+  const len = psiRe.length;
+  if (psiIm.length !== len) {
+    throw new Error(`kineticFullStep requires psiRe and psiIm to have the same length; got psiRe.length=${len}, psiIm.length=${psiIm.length}`);
+  }
+  const expectedLen = N * N * N;
+  if (len !== expectedLen) {
+    throw new Error(`kineticFullStep requires psi arrays length N^3; got psi length=${len}, N=${N}`);
+  }
+  if (expK.length !== (len << 1)) {
+    throw new Error(`kineticFullStep requires expK.length === 2 * psi length; got psi length=${len}, expK.length=${expK.length}`);
+  }
+  if (scratchRe.length < N || scratchIm.length < N) {
+    throw new Error(`kineticFullStep requires scratchRe/scratchIm length d N; got scratchRe.length=${scratchRe.length}, scratchIm.length=${scratchIm.length}, N=${N}`);
+  }
+
   // forward FFT to momentum space
   fft3d(psiRe, psiIm, N, false, scratchRe, scratchIm);
   
   // apply kinetic energy operator
-  const len = psiRe.length;
   for (let i = 0; i < len; i++) {
     const j = i << 1; 
     const kr = expK[j], ki = expK[j+1];

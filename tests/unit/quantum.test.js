@@ -320,6 +320,40 @@ describe('quantum.js', () => {
     expect(rel).toBeLessThan(1e-7);
   });
 
+  it('potentialHalfStep throws when array lengths are inconsistent', () => {
+    const psiRe = new Float32Array(4);
+    const psiIm = new Float32Array(3); // wrong length
+    const expVh = new Float32Array(8);
+    expect(() => potentialHalfStep(psiRe, psiIm, expVh)).toThrow(/same length/);
+
+    const psiIm2 = new Float32Array(4);
+    const badExp = new Float32Array(6); // not 2 * psi length
+    expect(() => potentialHalfStep(psiRe, psiIm2, badExp)).toThrow(/expVh.length === 2 \* psi length/);
+  });
+
+  it('kineticFullStep throws when array lengths are inconsistent', () => {
+    const N = 4;
+    const size = N * N * N;
+    const psiRe = new Float32Array(size);
+    const psiIm = new Float32Array(size - 1); // mismatch
+    const expK = new Float32Array(2 * size);
+    const sRe = new Float32Array(N);
+    const sIm = new Float32Array(N);
+    expect(() => kineticFullStep(psiRe, psiIm, expK, N, sRe, sIm)).toThrow(/same length/);
+
+    const psiIm2 = new Float32Array(size);
+    const expKBad = new Float32Array(2 * size - 2);
+    expect(() => kineticFullStep(psiRe, psiIm2, expKBad, N, sRe, sIm)).toThrow(/expK.length === 2 \* psi length/);
+
+    const psiShort = new Float32Array(size - 1);
+    const expKShort = new Float32Array(2 * (size - 1));
+    expect(() => kineticFullStep(psiShort, psiShort, expKShort, N, sRe, sIm)).toThrow(/psi arrays length N\^3/);
+
+    const sReShort = new Float32Array(N - 1);
+    const sImShort = new Float32Array(N - 1);
+    expect(() => kineticFullStep(psiRe, psiIm2, expK, N, sReShort, sImShort)).toThrow(/scratchRe\/scratchIm length/);
+  });
+
   it('addPacket3D centers amplitude near origin and obeys linearity', () => {
     const N = 8;
     const L = 8;
