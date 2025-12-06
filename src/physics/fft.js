@@ -341,7 +341,7 @@ function transformZ_p(re, im, N, inverse, lineRe, lineIm, plan) {
  * @param {Object} plan - precomputed FFT plan from makeFFTPlan(N)
  */
 export function fft3d_p(re, im, N, inverse, lineRe, lineIm, plan) {
-    if (!plan || plan.n !== N) {
+    if (plan?.n !== N) {
         // Fallback to unplanned version if plan is missing or wrong size
         fft3d(re, im, N, inverse, lineRe, lineIm);
         return;

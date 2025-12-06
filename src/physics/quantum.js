@@ -11,7 +11,7 @@ const MAX_THETA = 1e6;       // safe limit for phase arguments (radians)
 const MAX_DECAY_ARG = 700;   // exp(-700) ≈ 0, prevents underflow to -Infinity
 
 function validateDomainSize(L, caller) {
-  if (!Number.isFinite(L) || !(L > 0)) {
+  if (!Number.isFinite(L) || L <= 0) {
     throw new Error(`${caller} requires L to be a finite positive number; got L=${L}`);
   }
 }
@@ -34,7 +34,7 @@ export function createCoordinateArray(N, L) {
 }
 
 function validateGridSize(N) {
-  if (!(N >= 2) || ((N & (N - 1)) !== 0)) {
+  if (N < 2 || (N & (N - 1)) !== 0) {
     throw new Error(`grid size N must be a power of two (>=2); got N=${N}`);
   }
 }
@@ -159,7 +159,7 @@ export function buildPotentialExponentials(expVh, V, capS2, dt, absorbStrength) 
  */
 export function createAbsorbingBoundary(N, absorbFrac) {
   const cap = new Float32Array(N*N*N);
-  if (!(absorbFrac > 0)) {
+  if (absorbFrac <= 0) {
     return cap;
   }
   let nAbs = Math.floor(absorbFrac * N);
@@ -304,15 +304,9 @@ export function timeStep(psiRe, psiIm, expVh, expK, N, scratchRe, scratchIm, che
  * @param {Float32Array} pY - scratch array for y phase
  * @param {Float32Array} pZ - scratch array for z phase
  */
-export function addPacket3D(...args) {
-  let psiRe, psiIm, coord, N, cx, cy, cz, sx, sy, sz, kx, ky, kz, scale, gX, gY, gZ, pX, pY, pZ;
-  if (args.length === 1 && args[0] && typeof args[0] === 'object' && ('psiRe' in args[0])) {
-    ({ psiRe, psiIm, coord, N, cx, cy, cz, sx, sy, sz, kx, ky, kz, scale = 1, gX, gY, gZ, pX, pY, pZ } = args[0]);
-  } else {
-    [psiRe, psiIm, coord, N, cx, cy, cz, sx, sy, sz, kx, ky, kz, scale, gX, gY, gZ, pX, pY, pZ] = args;
-  }
-  
-  // design-validation: validate array lengths
+// helper to validate addPacket3D inputs (reduces cognitive complexity of main function)
+function validatePacketInputs(params) {
+  const { psiRe, psiIm, coord, N, sx, sy, sz, gX, gY, gZ, pX, pY, pZ } = params;
   const expectedLen = N * N * N;
   if (psiRe.length !== expectedLen || psiIm.length !== expectedLen) {
     throw new Error(`addPacket3D: psi arrays must have length N³=${expectedLen}; got psiRe=${psiRe.length}, psiIm=${psiIm.length}`);
@@ -323,10 +317,25 @@ export function addPacket3D(...args) {
   if (gX.length < N || gY.length < N || gZ.length < N || pX.length < N || pY.length < N || pZ.length < N) {
     throw new Error(`addPacket3D: scratch arrays must have length >= N=${N}`);
   }
-  
-  if (!(sx > 0 && sy > 0 && sz > 0)) {
+  if (sx <= 0 || sy <= 0 || sz <= 0) {
     throw new Error(`addPacket3D requires positive widths sx, sy, sz; got sx=${sx}, sy=${sy}, sz=${sz}`);
   }
+}
+
+// helper to parse addPacket3D arguments (object or positional)
+function parsePacketArgs(args) {
+  if (args.length === 1 && args[0] && typeof args[0] === 'object' && ('psiRe' in args[0])) {
+    const { psiRe, psiIm, coord, N, cx, cy, cz, sx, sy, sz, kx, ky, kz, scale = 1, gX, gY, gZ, pX, pY, pZ } = args[0];
+    return { psiRe, psiIm, coord, N, cx, cy, cz, sx, sy, sz, kx, ky, kz, scale, gX, gY, gZ, pX, pY, pZ };
+  }
+  const [psiRe, psiIm, coord, N, cx, cy, cz, sx, sy, sz, kx, ky, kz, scale, gX, gY, gZ, pX, pY, pZ] = args;
+  return { psiRe, psiIm, coord, N, cx, cy, cz, sx, sy, sz, kx, ky, kz, scale, gX, gY, gZ, pX, pY, pZ };
+}
+
+export function addPacket3D(...args) {
+  const params = parsePacketArgs(args);
+  validatePacketInputs(params);
+  const { psiRe, psiIm, coord, N, cx, cy, cz, sx, sy, sz, kx, ky, kz, scale, gX, gY, gZ, pX, pY, pZ } = params;
   const s2x = sx*sx, s2y = sy*sy, s2z = sz*sz;
   
   // compute 1D gaussians and phases

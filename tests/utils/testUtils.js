@@ -1,6 +1,7 @@
 // Shared test utilities to reduce duplication across unit tests
 // Keep helpers here so SonarQube doesn't flag duplicate blocks in tests
 import { fft1d, fft1d_p, makeFFTPlan, fft3d } from '../../src/physics/fft.js';
+import { createCoordinateArray, createKSpaceArrays } from '../../src/physics/quantum.js';
 
 /**
  * Linear index for 3D -> 1D mapping used in physics arrays
@@ -99,5 +100,34 @@ export function allocPacketScratch(N) {
     pX: new Float32Array(N),
     pY: new Float32Array(N),
     pZ: new Float32Array(N),
+  };
+}
+
+/**
+ * Create a minimal simulation context for testing.
+ * Returns { N, L, dx, cellVol, size, coord, psiRe, psiIm, V, kArrays, sRe, sIm }
+ */
+export function createTestSimContext(N = 8, L = 10) {
+  const dx = L / N;
+  const cellVol = dx * dx * dx;
+  const size = N * N * N;
+  const coord = createCoordinateArray(N, L);
+  const psiRe = new Float32Array(size);
+  const psiIm = new Float32Array(size);
+  const V = new Float32Array(size);
+  const kArrays = createKSpaceArrays(N, L);
+  const sRe = new Float32Array(N);
+  const sIm = new Float32Array(N);
+  return { N, L, dx, cellVol, size, coord, psiRe, psiIm, V, kArrays, sRe, sIm };
+}
+
+/**
+ * Create exponential arrays for simulation testing.
+ * Returns { expK, expVh }
+ */
+export function createTestExponentials(size) {
+  return {
+    expK: new Float32Array(2 * size),
+    expVh: new Float32Array(2 * size),
   };
 }
