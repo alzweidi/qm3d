@@ -254,20 +254,101 @@ function transformZ(re, im, N, inverse, lineRe, lineIm) {
 }
 
 /**
- * 3d fast fourier transform
+ * 3d fast fourier transform (unplanned - recomputes twiddle factors each call)
+ * Complexity: O(N³ log N) with O(N log N) overhead per call for twiddle factors.
  * applies 1d fft along each dimension sequentially
  * @param {Float32Array} re - real part array (N³ elements)
  * @param {Float32Array} im - imaginary part array (N³ elements)
  * @param {number} N - grid size (N×N×N)
  * @param {boolean} inverse - whether to perform inverse fft
- * @param {Float32Array} lineRe - scratch array for 1d transforms
- * @param {Float32Array} lineIm - scratch array for 1d transforms
- * @param {Object} [plan] - optional fft plan for optimization (unused)
+ * @param {Float32Array} lineRe - scratch array for 1d transforms (length N)
+ * @param {Float32Array} lineIm - scratch array for 1d transforms (length N)
  */
 export function fft3d(re, im, N, inverse, lineRe, lineIm) {
     transformX(re, im, N, inverse, lineRe, lineIm);
     transformY(re, im, N, inverse, lineRe, lineIm);
     transformZ(re, im, N, inverse, lineRe, lineIm);
+}
+
+// planned transform helpers using precomputed twiddle factors
+function transformX_p(re, im, N, inverse, lineRe, lineIm, plan) {
+    const idx = (x, y, z) => x + N * (y + N * z);
+    for (let z = 0; z < N; z++) {
+        for (let y = 0; y < N; y++) {
+            for (let x = 0; x < N; x++) {
+                const id = idx(x, y, z);
+                lineRe[x] = re[id];
+                lineIm[x] = im[id];
+            }
+            fft1d_p(lineRe, lineIm, inverse, plan);
+            for (let x = 0; x < N; x++) {
+                const id = idx(x, y, z);
+                re[id] = lineRe[x];
+                im[id] = lineIm[x];
+            }
+        }
+    }
+}
+
+function transformY_p(re, im, N, inverse, lineRe, lineIm, plan) {
+    const idx = (x, y, z) => x + N * (y + N * z);
+    for (let z = 0; z < N; z++) {
+        for (let x = 0; x < N; x++) {
+            for (let y = 0; y < N; y++) {
+                const id = idx(x, y, z);
+                lineRe[y] = re[id];
+                lineIm[y] = im[id];
+            }
+            fft1d_p(lineRe, lineIm, inverse, plan);
+            for (let y = 0; y < N; y++) {
+                const id = idx(x, y, z);
+                re[id] = lineRe[y];
+                im[id] = lineIm[y];
+            }
+        }
+    }
+}
+
+function transformZ_p(re, im, N, inverse, lineRe, lineIm, plan) {
+    const idx = (x, y, z) => x + N * (y + N * z);
+    for (let y = 0; y < N; y++) {
+        for (let x = 0; x < N; x++) {
+            for (let z = 0; z < N; z++) {
+                const id = idx(x, y, z);
+                lineRe[z] = re[id];
+                lineIm[z] = im[id];
+            }
+            fft1d_p(lineRe, lineIm, inverse, plan);
+            for (let z = 0; z < N; z++) {
+                const id = idx(x, y, z);
+                re[id] = lineRe[z];
+                im[id] = lineIm[z];
+            }
+        }
+    }
+}
+
+/**
+ * 3d fast fourier transform with precomputed plan (optimised).
+ * complexity: O(N³ log N) with minimal overhead (uses cached twiddle factors).
+ * for a 32³ grid, this eliminates ~3×32² redundant trig computations per timestep.
+ * @param {Float32Array} re - real part array (N³ elements)
+ * @param {Float32Array} im - imaginary part array (N³ elements)
+ * @param {number} N - grid size (N×N×N)
+ * @param {boolean} inverse - whether to perform inverse fft
+ * @param {Float32Array} lineRe - scratch array for 1d transforms (length N)
+ * @param {Float32Array} lineIm - scratch array for 1d transforms (length N)
+ * @param {Object} plan - precomputed FFT plan from makeFFTPlan(N)
+ */
+export function fft3d_p(re, im, N, inverse, lineRe, lineIm, plan) {
+    if (!plan || plan.n !== N) {
+        // Fallback to unplanned version if plan is missing or wrong size
+        fft3d(re, im, N, inverse, lineRe, lineIm);
+        return;
+    }
+    transformX_p(re, im, N, inverse, lineRe, lineIm, plan);
+    transformY_p(re, im, N, inverse, lineRe, lineIm, plan);
+    transformZ_p(re, im, N, inverse, lineRe, lineIm, plan);
 }
 
 /**

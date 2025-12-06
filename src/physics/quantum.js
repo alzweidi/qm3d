@@ -1,7 +1,14 @@
 // quantum wave function operations and simulation logic
 // split-step method for time evolution, wave packet creation, normalization
+//
+// split-step formula: ψ(t+dt) = exp(-iV·dt/2) · FFT⁻¹[ exp(-iT·dt) · FFT[ exp(-iV·dt/2) · ψ(t) ] ]
+// where T = k²/2 (kinetic) and V = V(r) (potential) in units where ℏ = m = 1
 
 import { fft3d } from './fft.js';
+
+// overflow protection constants
+const MAX_THETA = 1e6;       // safe limit for phase arguments (radians)
+const MAX_DECAY_ARG = 700;   // exp(-700) ≈ 0, prevents underflow to -Infinity
 
 function validateDomainSize(L, caller) {
   if (!Number.isFinite(L) || !(L > 0)) {
@@ -61,14 +68,25 @@ export function createKSpaceArrays(N, L) {
 }
 
 /**
- * build exponential operators for kinetic energy evolution
- * @param {Float32Array} expK - output array for kinetic exponentials
- * @param {Object} kArrays - k-space arrays from createKSpaceArrays
+ * build exponential operators for kinetic energy evolution.
+ * computes exp(-iT·dt) where T = k²/2 in momentum space.
+ * @param {Float32Array} expK - output array for kinetic exponentials (2×N³)
+ * @param {Object} kArrays - k-space arrays from createKSpaceArrays {kx2, ky2, kz2}
  * @param {number} N - grid size
- * @param {number} dt - time step
+ * @param {number} dt - time step (dimensionless)
+ * @throws {Error} If array lengths don't match expected sizes
  */
 export function buildKineticExponentials(expK, kArrays, N, dt) {
   const { kx2, ky2, kz2 } = kArrays;
+  const expectedLen = N * N * N;
+  
+  // design-validation: check array lengths
+  if (expK.length !== expectedLen * 2) {
+    throw new Error(`buildKineticExponentials: expK.length (${expK.length}) !== 2*N³ (${expectedLen * 2})`);
+  }
+  if (kx2.length !== N || ky2.length !== N || kz2.length !== N) {
+    throw new Error(`buildKineticExponentials: kArrays must have length N=${N}; got kx2=${kx2.length}, ky2=${ky2.length}, kz2=${kz2.length}`);
+  }
   
   for (let z = 0; z < N; z++) {
     const zOff = N*N*z;
@@ -89,12 +107,15 @@ export function buildKineticExponentials(expK, kArrays, N, dt) {
 }
 
 /**
- * build exponential operators for potential energy evolution
- * @param {Float32Array} expVh - output array for potential exponentials
- * @param {Float32Array} V - potential array
- * @param {Float32Array} capS2 - absorbing boundary array
- * @param {number} dt - time step
- * @param {number} absorbStrength - absorption strength
+ * build exponential operators for potential energy evolution.
+ * computes exp(-iV·dt/2) with optional absorbing boundary decay.
+ * num-overflow: guards against extreme |V|·dt values.
+ * @param {Float32Array} expVh - output array for potential exponentials (2×V.length)
+ * @param {Float32Array} V - potential array (dimensionless, ℏ=m=1)
+ * @param {Float32Array|null} capS2 - absorbing boundary array (null if no CAP)
+ * @param {number} dt - time step (dimensionless)
+ * @param {number} absorbStrength - absorption strength coefficient
+ * @throws {Error} If |V|·dt exceeds safe limits or array lengths mismatch
  */
 export function buildPotentialExponentials(expVh, V, capS2, dt, absorbStrength) {
   const half = -0.5 * dt;
@@ -109,7 +130,19 @@ export function buildPotentialExponentials(expVh, V, capS2, dt, absorbStrength) 
   const useCap = !!capS2 && absorbStrength > 0;
   for (let i = 0; i < len; i++) {
     const theta = half * V[i];
-    const decay = useCap ? Math.exp(-0.5 * absorbStrength * capS2[i] * dt) : 1;
+    
+    // num-overflow: guard against extreme phase values
+    if (Math.abs(theta) > MAX_THETA) {
+      throw new Error(`buildPotentialExponentials: |V[${i}]·dt/2| exceeds safe limit (theta=${theta.toExponential(3)}, V=${V[i].toExponential(3)}, dt=${dt}). Reduce dt or |V|.`);
+    }
+    
+    let decayArg = useCap ? 0.5 * absorbStrength * capS2[i] * dt : 0;
+    // num-overflow: clamp decay argument to prevent exp() underflow
+    if (decayArg > MAX_DECAY_ARG) {
+      decayArg = MAX_DECAY_ARG;
+    }
+    
+    const decay = Math.exp(-decayArg);
     const cr = Math.cos(theta) * decay; 
     const ci = Math.sin(theta) * decay;
     const j = i << 1; 
@@ -223,20 +256,29 @@ export function kineticFullStep(psiRe, psiIm, expK, N, scratchRe, scratchIm) {
 }
 
 /**
- * perform one time step using split-step method
+ * perform one time step using split-step (Strang splitting) method.
+ * formula: ψ(t+dt) = exp(-iV·dt/2) · exp(-iT·dt) · exp(-iV·dt/2) · ψ(t)
+ * this achieves O(dt²) accuracy via symmetric splitting.
  * @param {Float32Array} psiRe - real part of wave function
  * @param {Float32Array} psiIm - imaginary part of wave function
- * @param {Float32Array} expVh - potential exponentials
- * @param {Float32Array} expK - kinetic exponentials
+ * @param {Float32Array} expVh - potential exponentials from buildPotentialExponentials
+ * @param {Float32Array} expK - kinetic exponentials from buildKineticExponentials
  * @param {number} N - grid size
- * @param {Float32Array} scratchRe - scratch array for FFT
- * @param {Float32Array} scratchIm - scratch array for FFT
+ * @param {Float32Array} scratchRe - scratch array for FFT (length N)
+ * @param {Float32Array} scratchIm - scratch array for FFT (length N)
+ * @param {boolean} [checkStability=false] - if true, check for NaN/Infinity after step
+ * @throws {Error} If checkStability is true and NaN/Infinity is detected
  */
-export function timeStep(psiRe, psiIm, expVh, expK, N, scratchRe, scratchIm) {
+export function timeStep(psiRe, psiIm, expVh, expK, N, scratchRe, scratchIm, checkStability = false) {
   validateGridSize(N);
   potentialHalfStep(psiRe, psiIm, expVh);
   kineticFullStep(psiRe, psiIm, expK, N, scratchRe, scratchIm);
   potentialHalfStep(psiRe, psiIm, expVh);
+  
+  // num-nan: optional stability check
+  if (checkStability && !checkFinite(psiRe, psiIm)) {
+    throw new Error('timeStep: NaN or Infinity detected in wavefunction. Simulation diverged.');
+  }
 }
 
 /**
@@ -269,6 +311,19 @@ export function addPacket3D(...args) {
   } else {
     [psiRe, psiIm, coord, N, cx, cy, cz, sx, sy, sz, kx, ky, kz, scale, gX, gY, gZ, pX, pY, pZ] = args;
   }
+  
+  // design-validation: validate array lengths
+  const expectedLen = N * N * N;
+  if (psiRe.length !== expectedLen || psiIm.length !== expectedLen) {
+    throw new Error(`addPacket3D: psi arrays must have length N³=${expectedLen}; got psiRe=${psiRe.length}, psiIm=${psiIm.length}`);
+  }
+  if (coord.length !== N) {
+    throw new Error(`addPacket3D: coord.length (${coord.length}) !== N (${N})`);
+  }
+  if (gX.length < N || gY.length < N || gZ.length < N || pX.length < N || pY.length < N || pZ.length < N) {
+    throw new Error(`addPacket3D: scratch arrays must have length >= N=${N}`);
+  }
+  
   if (!(sx > 0 && sy > 0 && sz > 0)) {
     throw new Error(`addPacket3D requires positive widths sx, sy, sz; got sx=${sx}, sy=${sy}, sz=${sz}`);
   }
@@ -312,14 +367,20 @@ export function addPacket3D(...args) {
 }
 
 /**
- * normalise the wave function to unit probability
+ * normalise the wave function to unit probability.
  * @param {Float32Array} psiRe - real part of wave function
  * @param {Float32Array} psiIm - imaginary part of wave function
- * @param {number} cellVol - volume of each grid cell
+ * @param {number} cellVol - volume of each grid cell (dx³)
+ * @throws {Error} If psiRe and psiIm have different lengths
  */
 export function renormalize(psiRe, psiIm, cellVol) {
-  let sum = 0; 
   const len = psiRe.length;
+  // design-validation: check array length consistency
+  if (psiIm.length !== len) {
+    throw new Error(`renormalize: psiRe.length (${len}) !== psiIm.length (${psiIm.length})`);
+  }
+  
+  let sum = 0;
   for (let i = 0; i < len; i++) { 
     const pr = psiRe[i], pi = psiIm[i]; 
     sum += pr*pr + pi*pi; 
@@ -332,18 +393,117 @@ export function renormalize(psiRe, psiIm, cellVol) {
 }
 
 /**
- * calculate the total probability (norm) of the wave function
+ * calculate the total probability (norm) of the wave function.
  * @param {Float32Array} psiRe - real part of wave function
  * @param {Float32Array} psiIm - imaginary part of wave function
- * @param {number} cellVol - volume of each grid cell
- * @returns {number} total probability
+ * @param {number} cellVol - volume of each grid cell (dx³)
+ * @returns {number} total probability (should be ≈1 for normalized state)
+ * @throws {Error} If psiRe and psiIm have different lengths
  */
 export function calculateNorm(psiRe, psiIm, cellVol) {
-  let norm = 0; 
   const len = psiRe.length;
+  // design-validation: check array length consistency
+  if (psiIm.length !== len) {
+    throw new Error(`calculateNorm: psiRe.length (${len}) !== psiIm.length (${psiIm.length})`);
+  }
+  
+  let norm = 0;
   for (let i = 0; i < len; i++) { 
     const pr = psiRe[i], pi = psiIm[i]; 
     norm += pr*pr + pi*pi; 
   }
   return norm * cellVol;
+}
+
+/**
+ * check if wavefunction contains finite values (no NaN or Infinity).
+ * num-nan: lightweight numerical stability check.
+ * @param {Float32Array} psiRe - real part of wave function
+ * @param {Float32Array} psiIm - imaginary part of wave function
+ * @returns {boolean} true if all values are finite, false otherwise
+ */
+export function checkFinite(psiRe, psiIm) {
+  const len = psiRe.length;
+  for (let i = 0; i < len; i++) {
+    if (!Number.isFinite(psiRe[i]) || !Number.isFinite(psiIm[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * calculate the total energy expectation value ⟨H⟩ = ⟨T⟩ + ⟨V⟩.
+ * phys-energy-test: computes ⟨T⟩ in k-space and ⟨V⟩ in position space.
+ * 
+ * physics:
+ *   ⟨T⟩ = ∫ψ*(-½∇²)ψ dV = ½∫|k|²|ψ̃(k)|² dk  (kinetic in k-space)
+ *   ⟨V⟩ = ∫|ψ|² V dV                          (potential in position space)
+ * 
+ * Units: dimensionless (ℏ = m = 1)
+ * 
+ * @param {Float32Array} psiRe - real part of wave function
+ * @param {Float32Array} psiIm - imaginary part of wave function
+ * @param {Float32Array} V - potential array
+ * @param {Object} kArrays - k-space arrays from createKSpaceArrays {kx2, ky2, kz2}
+ * @param {number} N - grid size
+ * @param {number} cellVol - volume of each grid cell (dx³)
+ * @param {Float32Array} scratchRe - scratch array for FFT (length N)
+ * @param {Float32Array} scratchIm - scratch array for FFT (length N)
+ * @returns {Object} { kinetic, potential, total } energy components
+ */
+export function calculateEnergy(psiRe, psiIm, V, kArrays, N, cellVol, scratchRe, scratchIm) {
+  const len = psiRe.length;
+  const expectedLen = N * N * N;
+  
+  // validation
+  if (len !== expectedLen) {
+    throw new Error(`calculateEnergy: psi length (${len}) !== N³ (${expectedLen})`);
+  }
+  if (psiIm.length !== len) {
+    throw new Error(`calculateEnergy: psiRe.length (${len}) !== psiIm.length (${psiIm.length})`);
+  }
+  if (V.length !== len) {
+    throw new Error(`calculateEnergy: V.length (${V.length}) !== psi length (${len})`);
+  }
+  
+  const { kx2, ky2, kz2 } = kArrays;
+  
+  // calculate ⟨V⟩ in position space: ∫|ψ|² V dV
+  let potentialEnergy = 0;
+  for (let i = 0; i < len; i++) {
+    const prob = psiRe[i] * psiRe[i] + psiIm[i] * psiIm[i];
+    potentialEnergy += prob * V[i];
+  }
+  potentialEnergy *= cellVol;
+  
+  // calculate ⟨T⟩ in k-space: ½∫|k|²|ψ̃(k)|² dk
+  // need to FFT to k-space (make a copy to avoid modifying original)
+  const psiKRe = psiRe.slice();
+  const psiKIm = psiIm.slice();
+  fft3d(psiKRe, psiKIm, N, false, scratchRe, scratchIm);
+  
+  // in k-space, the FFT is unscaled, so |ψ̃|² needs scaling by 1/N³
+  // the k-space "volume element" is (2π/L)³ but for discrete sum we use 1/N³
+  let kineticEnergy = 0;
+  for (let z = 0; z < N; z++) {
+    const zOff = N * N * z;
+    for (let y = 0; y < N; y++) {
+      const yOff = zOff + N * y;
+      for (let x = 0; x < N; x++) {
+        const id = yOff + x;
+        const k2 = kx2[x] + ky2[y] + kz2[z];
+        const psiKSq = psiKRe[id] * psiKRe[id] + psiKIm[id] * psiKIm[id];
+        kineticEnergy += 0.5 * k2 * psiKSq;
+      }
+    }
+  }
+  // scale by 1/N³ for unscaled FFT and cellVol for proper integration
+  kineticEnergy *= cellVol / (N * N * N);
+  
+  return {
+    kinetic: kineticEnergy,
+    potential: potentialEnergy,
+    total: kineticEnergy + potentialEnergy
+  };
 }

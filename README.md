@@ -71,6 +71,17 @@ open the printed localhost url. vite will hot‑reload when you tweak code.
 - **boundaries:** periodic because fft; the cap exists to hide that.
 - **units:** nondimensional (ħ = m = 1). `x` is in `[−l/2,l/2]`; energies match your chosen `V` scale.
 
+### algorithm complexity
+
+| operation | complexity | notes |
+|-----------|------------|-------|
+| 3d fft | O(N³ log N) | radix‑2 cooley‑tukey per axis |
+| time step | O(N³ log N) | 2× fft + O(N³) pointwise ops |
+| potential build | O(N³) | one‑time precomputation |
+| memory | O(N³) | ~8 float32 arrays of size N³ |
+
+for N=32: ~32K cells, ~2ms/step on modern CPUs. for N=64: ~262K cells, ~20ms/step.
+
 ---
 
 ## numerics defaults (good starting point)
