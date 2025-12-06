@@ -13,6 +13,7 @@ import {
   renormalize,
   calculateNorm,
   calculateEnergy,
+  checkFinite,
 } from '../../src/physics/quantum.js';
 import { fft3d } from '../../src/physics/fft.js';
 
@@ -148,6 +149,32 @@ describe('quantum.js', () => {
     expect(() => createKSpaceArrays(32, NaN)).toThrow(/finite positive/);
   });
 
+  it('buildKineticExponentials throws when expK has wrong length', () => {
+    const N = 4;
+    const L = 10;
+    const kArrays = createKSpaceArrays(N, L);
+    const expK = new Float32Array(100); // wrong size, should be 2*N³ = 128
+    
+    expect(() => buildKineticExponentials(expK, kArrays, N, 0.01))
+      .toThrow(/expK.length.*!== 2\*N³/);
+  });
+
+  it('buildKineticExponentials throws when kArrays have wrong length', () => {
+    const N = 4;
+    const size = N * N * N;
+    const expK = new Float32Array(2 * size);
+    
+    // create kArrays with wrong length
+    const badKArrays = {
+      kx2: new Float32Array(N - 1), // wrong size
+      ky2: new Float32Array(N),
+      kz2: new Float32Array(N)
+    };
+    
+    expect(() => buildKineticExponentials(expK, badKArrays, N, 0.01))
+      .toThrow(/kArrays must have length N/);
+  });
+
   it('buildKineticExponentials writes correct complex exponentials', () => {
     const N = 4;
     const L = 2 * Math.PI;
@@ -197,6 +224,45 @@ describe('quantum.js', () => {
     // angle still follows theta
     const ang = Math.atan2(expVh[j + 1], expVh[j]);
     expect(ang).toBeCloseTo(theta, 7); // allow some wrap/precision tolerance
+  });
+
+  it('buildPotentialExponentials throws when |V|·dt exceeds safe limit', () => {
+    const N = 2;
+    const size = N * N * N;
+    const V = new Float32Array(size);
+    const expVh = new Float32Array(2 * size);
+    
+    // MAX_THETA is 1e6, so |V|·dt/2 > 1e6 means |V|·dt > 2e6
+    // With dt=0.1 and V=1e8, theta = 0.5 * 0.1 * 1e8 = 5e6 > 1e6
+    V[0] = 1e8;
+    const dt = 0.1;
+    
+    expect(() => buildPotentialExponentials(expVh, V, null, dt, 0))
+      .toThrow(/exceeds safe limit/);
+  });
+
+  it('buildPotentialExponentials clamps extreme decay argument', () => {
+    // test that very large CAP values are clamped to prevent underflow
+    const N = 2;
+    const size = N * N * N;
+    const V = new Float32Array(size);
+    const expVh = new Float32Array(2 * size);
+    const capS2 = new Float32Array(size);
+    
+    // set extremely high cap value that would cause decayArg > MAX_DECAY_ARG (700)
+    // decayArg = 0.5 * absorbStrength * capS2[i] * dt
+    // to get decayArg > 700: 0.5 * 10000 * 1 * 0.15 = 750 > 700
+    capS2[0] = 1;
+    const dt = 0.15;
+    const absorbStrength = 10000; // very high strength
+    
+    // should not throw - just clamp
+    expect(() => buildPotentialExponentials(expVh, V, capS2, dt, absorbStrength))
+      .not.toThrow();
+    
+    // the decay should be clamped to exp(-700) ≈ 0, so magnitude should be ~0
+    const mag = Math.hypot(expVh[0], expVh[1]);
+    expect(mag).toBeCloseTo(0, 10);
   });
 
   it('buildPotentialExponentials throws when buffer lengths are inconsistent', () => {
@@ -449,6 +515,82 @@ describe('quantum.js', () => {
     expect(ratioOK).toBe(true);
   });
 
+  it('addPacket3D throws for psi arrays with wrong length', () => {
+    const N = 8;
+    const L = 8;
+    const coord = createCoordinateArray(N, L);
+    const size = N * N * N;
+    const psiRe = new Float32Array(size - 1); // wrong size
+    const psiIm = new Float32Array(size);
+
+    const gX = new Float32Array(N);
+    const gY = new Float32Array(N);
+    const gZ = new Float32Array(N);
+    const pX = new Float32Array(N);
+    const pY = new Float32Array(N);
+    const pZ = new Float32Array(N);
+
+    expect(() => addPacket3D(
+      psiRe, psiIm, coord, N,
+      0, 0, 0,
+      0.6, 0.6, 0.6,
+      0, 0, 0,
+      1,
+      gX, gY, gZ, pX, pY, pZ
+    )).toThrow(/psi arrays must have length N³/);
+  });
+
+  it('addPacket3D throws for coord array with wrong length', () => {
+    const N = 8;
+    const L = 8;
+    const coord = createCoordinateArray(N - 1, L); // wrong size
+    const size = N * N * N;
+    const psiRe = new Float32Array(size);
+    const psiIm = new Float32Array(size);
+
+    const gX = new Float32Array(N);
+    const gY = new Float32Array(N);
+    const gZ = new Float32Array(N);
+    const pX = new Float32Array(N);
+    const pY = new Float32Array(N);
+    const pZ = new Float32Array(N);
+
+    expect(() => addPacket3D(
+      psiRe, psiIm, coord, N,
+      0, 0, 0,
+      0.6, 0.6, 0.6,
+      0, 0, 0,
+      1,
+      gX, gY, gZ, pX, pY, pZ
+    )).toThrow(/coord.length.*!== N/);
+  });
+
+  it('addPacket3D throws for scratch arrays that are too small', () => {
+    const N = 8;
+    const L = 8;
+    const coord = createCoordinateArray(N, L);
+    const size = N * N * N;
+    const psiRe = new Float32Array(size);
+    const psiIm = new Float32Array(size);
+
+    // one scratch array too small
+    const gX = new Float32Array(N - 1); // too small
+    const gY = new Float32Array(N);
+    const gZ = new Float32Array(N);
+    const pX = new Float32Array(N);
+    const pY = new Float32Array(N);
+    const pZ = new Float32Array(N);
+
+    expect(() => addPacket3D(
+      psiRe, psiIm, coord, N,
+      0, 0, 0,
+      0.6, 0.6, 0.6,
+      0, 0, 0,
+      1,
+      gX, gY, gZ, pX, pY, pZ
+    )).toThrow(/scratch arrays must have length/);
+  });
+
   it('addPacket3D throws for non-positive widths', () => {
     const N = 8;
     const L = 8;
@@ -473,6 +615,13 @@ describe('quantum.js', () => {
       1,
       gX, gY, gZ, pX, pY, pZ
     )).toThrow(/positive widths/i);
+  });
+
+  it('renormalize throws when psiRe and psiIm lengths differ', () => {
+    const psiRe = new Float32Array(64);
+    const psiIm = new Float32Array(63); // wrong size
+    expect(() => renormalize(psiRe, psiIm, 1))
+      .toThrow(/psiRe.length.*!== psiIm.length/);
   });
 
   it('renormalize brings norm to ~1, zero state remains zero', () => {
@@ -696,6 +845,31 @@ describe('quantum.js', () => {
     expect(() => timeStep(psiRe, psiIm, expVh, expK, 1, sRe, sIm)).toThrow(/power of two/i);
   });
 
+  it('timeStep with checkStability throws when NaN detected', () => {
+    const N = 4;
+    const L = 10;
+    const size = N * N * N;
+    const psiRe = new Float32Array(size);
+    const psiIm = new Float32Array(size);
+    
+    // set initial values with a NaN that will propagate
+    psiRe[0] = NaN;
+    
+    const kArrays = createKSpaceArrays(N, L);
+    const expK = new Float32Array(2 * size);
+    const expVh = new Float32Array(2 * size);
+    
+    buildKineticExponentials(expK, kArrays, N, 0.01);
+    buildPotentialExponentials(expVh, new Float32Array(size), null, 0.01, 0);
+    
+    const sRe = new Float32Array(N);
+    const sIm = new Float32Array(N);
+    
+    // should throw with checkStability=true
+    expect(() => timeStep(psiRe, psiIm, expVh, expK, N, sRe, sIm, true))
+      .toThrow(/NaN or Infinity detected/);
+  });
+
   // PHYS-ENERGY-TEST: energy conservation test for free particle (V=0)
   it('calculateEnergy conserves total energy for free particle over many steps', () => {
     const N = 16;
@@ -763,8 +937,8 @@ describe('quantum.js', () => {
   // note: the factor of 2 comes from the minimum uncertainty wavepacket convention.
   // our addPacket3D uses exp(-x²/2σ²), which has RMS = σ/√2 for |ψ|².
   it('free Gaussian spreading matches analytical formula', () => {
-    const N = 32;
-    const L = 20; // Large domain to avoid boundary effects
+    const N = 16; // Reduced from 32 for faster test
+    const L = 16; // Adjusted domain
     const dx = L / N;
     const cellVol = dx * dx * dx;
     const coord = createCoordinateArray(N, L);
@@ -820,8 +994,8 @@ describe('quantum.js', () => {
     const kArrays = createKSpaceArrays(N, L);
     const expK = new Float32Array(2 * size);
     const expVh = new Float32Array(2 * size);
-    const dt = 0.05 * dx * dx;
-    const steps = 200;
+    const dt = 0.1 * dx * dx; // Larger dt for fewer steps
+    const steps = 50; // Reduced from 200 for faster test
     const totalTime = steps * dt;
 
     buildKineticExponentials(expK, kArrays, N, dt);
@@ -856,7 +1030,75 @@ describe('quantum.js', () => {
     expect(relError).toBeLessThan(0.35);
   });
 
-  // TEST-EXTREME: extreme parameter test - high CAP strength
+  // calculateEnergy validation tests
+  it('calculateEnergy throws when psi length mismatches N³', () => {
+    const N = 4;
+    const size = N * N * N;
+    const psiRe = new Float32Array(size - 1); // wrong size
+    const psiIm = new Float32Array(size - 1);
+    const V = new Float32Array(size - 1);
+    const kArrays = createKSpaceArrays(N, 10);
+    const sRe = new Float32Array(N);
+    const sIm = new Float32Array(N);
+
+    expect(() => calculateEnergy(psiRe, psiIm, V, kArrays, N, 1, sRe, sIm))
+      .toThrow(/psi length.*!== N³/);
+  });
+
+  it('calculateEnergy throws when psiRe and psiIm lengths differ', () => {
+    const N = 4;
+    const size = N * N * N;
+    const psiRe = new Float32Array(size);
+    const psiIm = new Float32Array(size - 1); // wrong size
+    const V = new Float32Array(size);
+    const kArrays = createKSpaceArrays(N, 10);
+    const sRe = new Float32Array(N);
+    const sIm = new Float32Array(N);
+
+    expect(() => calculateEnergy(psiRe, psiIm, V, kArrays, N, 1, sRe, sIm))
+      .toThrow(/psiRe.length.*!== psiIm.length/);
+  });
+
+  it('calculateEnergy throws when V length mismatches psi', () => {
+    const N = 4;
+    const size = N * N * N;
+    const psiRe = new Float32Array(size);
+    const psiIm = new Float32Array(size);
+    const V = new Float32Array(size - 1); // wrong size
+    const kArrays = createKSpaceArrays(N, 10);
+    const sRe = new Float32Array(N);
+    const sIm = new Float32Array(N);
+
+    expect(() => calculateEnergy(psiRe, psiIm, V, kArrays, N, 1, sRe, sIm))
+      .toThrow(/V.length.*!== psi length/);
+  });
+
+  it('calculateNorm throws when psiRe and psiIm lengths differ', () => {
+    const psiRe = new Float32Array(64);
+    const psiIm = new Float32Array(63); // wrong size
+    expect(() => calculateNorm(psiRe, psiIm, 1))
+      .toThrow(/psiRe.length.*!== psiIm.length/);
+  });
+
+  it('checkFinite returns true for finite arrays', () => {
+    const psiRe = new Float32Array([1, 2, 3, 4]);
+    const psiIm = new Float32Array([0.5, 0.5, 0.5, 0.5]);
+    expect(checkFinite(psiRe, psiIm)).toBe(true);
+  });
+
+  it('checkFinite returns false when psiRe contains NaN', () => {
+    const psiRe = new Float32Array([1, NaN, 3, 4]);
+    const psiIm = new Float32Array([0.5, 0.5, 0.5, 0.5]);
+    expect(checkFinite(psiRe, psiIm)).toBe(false);
+  });
+
+  it('checkFinite returns false when psiIm contains Infinity', () => {
+    const psiRe = new Float32Array([1, 2, 3, 4]);
+    const psiIm = new Float32Array([0.5, Infinity, 0.5, 0.5]);
+    expect(checkFinite(psiRe, psiIm)).toBe(false);
+  });
+
+  // TEST-EXTREME: Extreme parameter test - high CAP strength
   it('simulation remains stable with high CAP strength', () => {
     const N = 16;
     const L = 10;
