@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { rmsRelativeErrorComplex as rmsRelativeError, fillRandomPair, expectFft1dPlanEquivalence, compute3dRoundTripError } from '../utils/testUtils.js';
-import { fft1d, cMul, cExp, makeFFTPlan, fft1d_p, runFFTSelfTests } from '../../src/physics/fft.js';
+import { fft1d, fft3d, cMul, cExp, makeFFTPlan, fft1d_p, runFFTSelfTests } from '../../src/physics/fft.js';
 
 // rmsRelativeError and fillRandomPair moved to tests/utils/testUtils.js
 
@@ -9,6 +9,63 @@ describe('fft.js', () => {
     const re = new Float32Array(6);
     const im = new Float32Array(6);
     expect(() => fft1d(re, im, false)).toThrow();
+  });
+
+  it('fft1d throws on mismatched re/im lengths', () => {
+    const re = new Float32Array(8);
+    const im = new Float32Array(4);
+    expect(() => fft1d(re, im, false)).toThrow(/same length/i);
+  });
+
+  it('fft1d_p throws on mismatched re/im lengths', () => {
+    const re = new Float32Array(8);
+    const im = new Float32Array(4);
+    const plan = makeFFTPlan(8);
+    expect(() => fft1d_p(re, im, false, plan)).toThrow(/same length/i);
+  });
+
+  it('fft3d validates array lengths and scratch size', () => {
+    const N = 4;
+    const size = N * N * N;
+
+    const reBad = new Float32Array(size);
+    const imBad = new Float32Array(size - 1);
+    const sRe = new Float32Array(N);
+    const sIm = new Float32Array(N);
+    expect(() => fft3d(reBad, imBad, N, false, sRe, sIm)).toThrow(/same length/i);
+
+    const reShort = new Float32Array(size - 2);
+    const imShort = new Float32Array(size - 2);
+    expect(() => fft3d(reShort, imShort, N, false, sRe, sIm)).toThrow(/N\^3/i);
+
+    const re = new Float32Array(size);
+    const im = new Float32Array(size);
+    const sReShort = new Float32Array(N - 1);
+    expect(() => fft3d(re, im, N, false, sReShort, sIm)).toThrow(/lineRe\/lineIm length/i);
+  });
+
+  it('fft1d of a complex exponential peaks at the expected bin', () => {
+    const N = 16;
+    const m = 3;
+    const re = new Float32Array(N);
+    const im = new Float32Array(N);
+    for (let n = 0; n < N; n++) {
+      const ang = (2 * Math.PI * m * n) / N;
+      re[n] = Math.cos(ang);
+      im[n] = Math.sin(ang);
+    }
+    fft1d(re, im, false);
+    let maxMag = -Infinity;
+    let maxIdx = -1;
+    let maxOther = 0;
+    for (let k = 0; k < N; k++) {
+      const mag = Math.hypot(re[k], im[k]);
+      if (mag > maxMag) { maxMag = mag; maxIdx = k; }
+      if (k !== m) maxOther = Math.max(maxOther, mag);
+    }
+    expect(maxIdx).toBe(m);
+    expect(maxMag).toBeCloseTo(N, 6);
+    expect(maxOther).toBeLessThan(1e-4);
   });
 
   it('fft1d_p equals fft1d (inverse, N=16)', () => {

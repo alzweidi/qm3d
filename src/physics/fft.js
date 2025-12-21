@@ -19,7 +19,24 @@ export const cMul = (ar, ai, br, bi) => [ar * br - ai * bi, ar * bi + ai * br];
 export const cExp = (theta) => [Math.cos(theta), Math.sin(theta)];
 
 function ensurePowerOfTwo(n) {
-    if ((n & (n - 1)) !== 0) throw new Error('fft1d requires power‑of‑two length');
+    if (n < 2 || (n & (n - 1)) !== 0) throw new Error('fft1d requires power-of-two length >= 2');
+}
+
+function ensureSameLength(re, im, caller) {
+    if (re.length !== im.length) {
+        throw new Error(`${caller} requires re and im to have the same length; got re.length=${re.length}, im.length=${im.length}`);
+    }
+}
+
+function ensureFft3dLengths(re, im, N, lineRe, lineIm) {
+    ensureSameLength(re, im, 'fft3d');
+    const expected = N * N * N;
+    if (re.length !== expected) {
+        throw new Error(`fft3d requires re/im length === N^3; got length=${re.length}, N=${N}`);
+    }
+    if (lineRe.length < N || lineIm.length < N) {
+        throw new Error(`fft3d requires lineRe/lineIm length >= N; got lineRe.length=${lineRe.length}, lineIm.length=${lineIm.length}, N=${N}`);
+    }
 }
 
 function bitReversePermutationInPlace(re, im) {
@@ -91,6 +108,7 @@ function normalizeInverse(re, im) {
  * @param {boolean} inverse - whether to perform inverse FFT
  */
 export function fft1d(re, im, inverse = false) {
+    ensureSameLength(re, im, 'fft1d');
     ensurePowerOfTwo(re.length);
     bitReversePermutationInPlace(re, im);
     applyStages(re, im, inverse);
@@ -146,6 +164,7 @@ export function makeFFTPlan(n) {
  * @param {Object} plan - precomputed fft plan
  */
 export function fft1d_p(re, im, inverse, plan) {
+    ensureSameLength(re, im, 'fft1d_p');
     const n = re.length;
     if (plan?.n !== n) {
         fft1d(re, im, inverse);
@@ -265,6 +284,7 @@ function transformZ(re, im, N, inverse, lineRe, lineIm) {
  * @param {Object} [plan] - optional fft plan for optimization (unused)
  */
 export function fft3d(re, im, N, inverse, lineRe, lineIm) {
+    ensureFft3dLengths(re, im, N, lineRe, lineIm);
     transformX(re, im, N, inverse, lineRe, lineIm);
     transformY(re, im, N, inverse, lineRe, lineIm);
     transformZ(re, im, N, inverse, lineRe, lineIm);

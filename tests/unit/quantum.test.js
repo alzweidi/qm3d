@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { lin, fillRandomPair, rmsRelativeErrorComplex as rmsRel } from '../utils/testUtils.js';
+import { lin, fillRandomPair, rmsRelativeErrorComplex as rmsRel, allocPacketScratch } from '../utils/testUtils.js';
+import { presetHarmonic } from '../../src/physics/potentials.js';
 import {
   createCoordinateArray,
   createKSpaceArrays,
@@ -18,6 +19,19 @@ import { fft3d } from '../../src/physics/fft.js';
 // lin moved to tests/utils/testUtils.js
 
 describe('quantum.js', () => {
+  function meanX(psiRe, psiIm, coord, N, cellVol) {
+    let sum = 0;
+    for (let z = 0; z < N; z++) {
+      for (let y = 0; y < N; y++) {
+        for (let x = 0; x < N; x++) {
+          const id = lin(x, y, z, N);
+          const pr = psiRe[id], pi = psiIm[id];
+          sum += coord[x] * (pr * pr + pi * pi);
+        }
+      }
+    }
+    return sum * cellVol;
+  }
   it('createCoordinateArray produces centered cell coordinates', () => {
     const arr = createCoordinateArray(4, 2);
     expect(Array.from(arr)).toEqualCloseTo([-0.75, -0.25, 0.25, 0.75], 10);
@@ -683,6 +697,101 @@ describe('quantum.js', () => {
 
   it('createKSpaceArrays throws for non power-of-two N (fast validation)', () => {
     expect(() => createKSpaceArrays(12, 10)).toThrow(/power of two/i);
+  });
+
+  it('free packet center moves with group velocity ~ kx', () => {
+    const N = 32;
+    const L = 20;
+    const dx = L / N;
+    const cellVol = dx * dx * dx;
+    const coord = createCoordinateArray(N, L);
+    const size = N * N * N;
+
+    const psiRe = new Float32Array(size);
+    const psiIm = new Float32Array(size);
+    const { gX, gY, gZ, pX, pY, pZ } = allocPacketScratch(N);
+
+    const x0 = -L / 4;
+    const kx = 1.0;
+    addPacket3D(
+      psiRe, psiIm, coord, N,
+      x0, 0, 0,
+      0.7, 0.7, 0.7,
+      kx, 0, 0,
+      1,
+      gX, gY, gZ, pX, pY, pZ
+    );
+    renormalize(psiRe, psiIm, cellVol);
+
+    const mean0 = meanX(psiRe, psiIm, coord, N, cellVol);
+
+    const kArrays = createKSpaceArrays(N, L);
+    const expK = new Float32Array(2 * size);
+    const expVh = new Float32Array(2 * size);
+    const dt = 0.02 * dx * dx;
+    buildKineticExponentials(expK, kArrays, N, dt);
+    buildPotentialExponentials(expVh, new Float32Array(size), null, dt, 0);
+
+    const sRe = new Float32Array(N);
+    const sIm = new Float32Array(N);
+    const steps = 60;
+    for (let i = 0; i < steps; i++) {
+      timeStep(psiRe, psiIm, expVh, expK, N, sRe, sIm);
+    }
+
+    const mean1 = meanX(psiRe, psiIm, coord, N, cellVol);
+    const shift = mean1 - mean0;
+    const expected = kx * dt * steps;
+    const rel = Math.abs(shift - expected) / Math.max(1e-6, Math.abs(expected));
+    expect(shift).toBeGreaterThan(0);
+    expect(rel).toBeLessThan(0.2);
+  });
+
+  it('harmonic potential pulls packet center toward origin', () => {
+    const N = 32;
+    const L = 20;
+    const dx = L / N;
+    const cellVol = dx * dx * dx;
+    const coord = createCoordinateArray(N, L);
+    const size = N * N * N;
+
+    const psiRe = new Float32Array(size);
+    const psiIm = new Float32Array(size);
+    const { gX, gY, gZ, pX, pY, pZ } = allocPacketScratch(N);
+
+    const x0 = -L / 5;
+    addPacket3D(
+      psiRe, psiIm, coord, N,
+      x0, 0, 0,
+      0.7, 0.7, 0.7,
+      0, 0, 0,
+      1,
+      gX, gY, gZ, pX, pY, pZ
+    );
+    renormalize(psiRe, psiIm, cellVol);
+
+    const mean0 = meanX(psiRe, psiIm, coord, N, cellVol);
+
+    const V = new Float32Array(size);
+    presetHarmonic(V, coord, N, 1);
+    const kArrays = createKSpaceArrays(N, L);
+    const expK = new Float32Array(2 * size);
+    const expVh = new Float32Array(2 * size);
+    const dt = 0.02 * dx * dx;
+    buildKineticExponentials(expK, kArrays, N, dt);
+    buildPotentialExponentials(expVh, V, null, dt, 0);
+
+    const sRe = new Float32Array(N);
+    const sIm = new Float32Array(N);
+    const steps = 50;
+    for (let i = 0; i < steps; i++) {
+      timeStep(psiRe, psiIm, expVh, expK, N, sRe, sIm);
+    }
+
+    const mean1 = meanX(psiRe, psiIm, coord, N, cellVol);
+    expect(mean1).toBeLessThan(0);
+    expect(mean1).toBeGreaterThan(mean0);
+    expect(Math.abs(mean1)).toBeLessThan(Math.abs(mean0));
   });
 
   it('timeStep throws early for N < 2 (fast validation)', () => {

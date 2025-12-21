@@ -597,7 +597,7 @@ export default function QuantumWaveEngine() {
         interactive quantum wave simulator: 3d (split-step fft)
       </h1>
       <p className="text-slate-300 mb-4">
-        add a 3d gaussian packet, choose a potential, and orbit the volume. points encode |ψ|² by size and arg(ψ) by hue.
+        add a 3d gaussian packet, choose a potential, and orbit the volume. points encode |ψ| by size and arg(ψ) by hue.
       </p>
 
       <div className="grid lg:grid-cols-3 gap-4 md:gap-6">
