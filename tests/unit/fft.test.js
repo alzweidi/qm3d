@@ -1,6 +1,15 @@
 import { describe, it, expect, vi } from 'vitest';
-import { rmsRelativeErrorComplex as rmsRelativeError, fillRandomPair, expectFft1dPlanEquivalence, compute3dRoundTripError } from '../utils/testUtils.js';
-import { fft1d, cMul, cExp, makeFFTPlan, fft1d_p, runFFTSelfTests } from '../../src/physics/fft.js';
+import {
+  rmsRelativeErrorComplex as rmsRelativeError,
+  fillRandomPair,
+  expectFft1dPlanEquivalence,
+  compute3dRoundTripError,
+  create3dArrayPair,
+  create3dArrayPairs,
+  createLineScratch,
+  expectArraysClose,
+} from '../utils/testUtils.js';
+import { fft1d, fft3d, fft3d_p, cMul, cExp, makeFFTPlan, fft1d_p, runFFTSelfTests } from '../../src/physics/fft.js';
 
 // rmsRelativeError and fillRandomPair moved to tests/utils/testUtils.js
 
@@ -127,5 +136,54 @@ describe('fft.js', () => {
     rnd.mockRestore();
     log.mockRestore();
     err.mockRestore();
+  });
+
+  it('fft3d_p with valid plan matches fft3d', () => {
+    const N = 8;
+    const { re1, im1, re2, im2 } = create3dArrayPairs(N);
+    const { lineRe, lineIm } = createLineScratch(N);
+    const plan = makeFFTPlan(N);
+
+    fft3d(re1, im1, N, false, lineRe, lineIm);
+    fft3d_p(re2, im2, N, false, lineRe, lineIm, plan);
+
+    expect(rmsRelativeError(re1, im1, re2, im2)).toBeLessThan(1e-5);
+  });
+
+  it('fft3d_p round-trip with plan preserves data', () => {
+    const N = 8;
+    const { re, im } = create3dArrayPair(N, true);
+    const r0 = re.slice();
+    const i0 = im.slice();
+    const { lineRe, lineIm } = createLineScratch(N);
+    const plan = makeFFTPlan(N);
+
+    fft3d_p(re, im, N, false, lineRe, lineIm, plan);
+    fft3d_p(re, im, N, true, lineRe, lineIm, plan);
+
+    expect(rmsRelativeError(re, im, r0, i0)).toBeLessThan(1e-5);
+  });
+
+  it('fft3d_p falls back to fft3d when plan is null', () => {
+    const N = 8;
+    const { re1, im1, re2, im2 } = create3dArrayPairs(N);
+    const { lineRe, lineIm } = createLineScratch(N);
+
+    fft3d(re1, im1, N, false, lineRe, lineIm);
+    fft3d_p(re2, im2, N, false, lineRe, lineIm, null);
+
+    expectArraysClose(re1, im1, re2, im2);
+  });
+
+  it('fft3d_p falls back to fft3d when plan has wrong N', () => {
+    const N = 8;
+    const { re1, im1, re2, im2 } = create3dArrayPairs(N);
+    const { lineRe, lineIm } = createLineScratch(N);
+    const wrongPlan = makeFFTPlan(4);
+
+    fft3d(re1, im1, N, false, lineRe, lineIm);
+    fft3d_p(re2, im2, N, false, lineRe, lineIm, wrongPlan);
+
+    expectArraysClose(re1, im1, re2, im2);
   });
 });

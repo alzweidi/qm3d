@@ -1,20 +1,26 @@
 // potential energy functions for quantum wave simulation
 // various preset potentials: free space, barriers, wells, harmonic oscillator
+//
+// units: dimensionless (ℏ = m = 1). energy scale set by V₀ values.
+// spatial coordinates: x, y, z ∈ [-L/2, L/2]
 
 /**
- * set potential to zero everywhere (free space)
- * @param {Float32Array} V - potential array to modify
+ * set potential to zero everywhere (free space).
+ * formula: V(r) = 0
+ * @param {Float32Array} V - potential array to modify (dimensionless)
  */
 export function presetFree(V) {
   V.fill(0);
 }
 
 /**
- * create a plane barrier potential at x > 0
- * @param {Float32Array} V - potential array to modify
+ * create a plane barrier potential (step function at x = 0).
+ * formula: V(x,y,z) = V₀ if x > 0, else 0
+ * physics: models quantum tunneling and reflection at a potential step.
+ * @param {Float32Array} V - potential array to modify (dimensionless)
  * @param {Float32Array} coord - coordinate array
  * @param {number} N - grid size
- * @param {number} V0 - barrier height (default: 4)
+ * @param {number} V0 - barrier height (default: 4, dimensionless energy units)
  */
 export function presetPlaneBarrier(V, coord, N, V0 = 4) {
   for (let z = 0; z < N; z++) {
@@ -29,12 +35,14 @@ export function presetPlaneBarrier(V, coord, N, V0 = 4) {
 }
 
 /**
- * create a cubic potential well in the center
- * @param {Float32Array} V - potential array to modify
+ * create a cubic potential well centered at origin.
+ * formula: V(x,y,z) = V₀ if |x|,|y|,|z| < w/2, else 0  (where w = 0.4L)
+ * physics: 3D infinite square well approximation for bound states.
+ * @param {Float32Array} V - potential array to modify (dimensionless)
  * @param {Float32Array} coord - coordinate array
  * @param {number} N - grid size
  * @param {number} L - domain size
- * @param {number} V0 - well depth (default: -6)
+ * @param {number} V0 - well depth (default: -6, negative = attractive)
  */
 export function presetBoxWell(V, coord, N, L, V0 = -6) {
   const w = L * 0.4;
@@ -53,12 +61,14 @@ export function presetBoxWell(V, coord, N, L, V0 = -6) {
 }
 
 /**
- * create a spherical potential well
- * @param {Float32Array} V - potential array to modify
+ * create a spherical potential well centered at origin.
+ * formula: V(r) = V₀ if r < R, else 0  (where R = 0.25L, r = √(x²+y²+z²))
+ * physics: spherically symmetric well, models atomic-like potentials.
+ * @param {Float32Array} V - potential array to modify (dimensionless)
  * @param {Float32Array} coord - coordinate array
  * @param {number} N - grid size
  * @param {number} L - domain size
- * @param {number} V0 - well depth (default: -8)
+ * @param {number} V0 - well depth (default: -8, negative = attractive)
  */
 export function presetSphere(V, coord, N, L, V0 = -8) {
   const R = L * 0.25; 
@@ -78,11 +88,14 @@ export function presetSphere(V, coord, N, L, V0 = -8) {
 }
 
 /**
- * create a 3d harmonic oscillator potential
- * @param {Float32Array} V - potential array to modify
+ * create a 3D isotropic harmonic oscillator potential.
+ * formula: V(r) = ½ω²r² = ½ω²(x² + y² + z²)
+ * physics: exactly solvable; ground state energy E₀ = (3/2)ℏω = 1.5ω (with ℏ=1).
+ * eigenstates are Hermite-Gaussian functions.
+ * @param {Float32Array} V - potential array to modify (dimensionless)
  * @param {Float32Array} coord - coordinate array
  * @param {number} N - grid size
- * @param {number} omega - oscillator frequency (default: 1)
+ * @param {number} omega - angular frequency (default: 1, dimensionless)
  */
 export function presetHarmonic(V, coord, N, omega = 1) {
   for (let z = 0; z < N; z++) {

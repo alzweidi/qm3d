@@ -1,6 +1,7 @@
 // Shared test utilities to reduce duplication across unit tests
 // Keep helpers here so SonarQube doesn't flag duplicate blocks in tests
 import { fft1d, fft1d_p, makeFFTPlan, fft3d } from '../../src/physics/fft.js';
+import { createCoordinateArray, createKSpaceArrays } from '../../src/physics/quantum.js';
 
 /**
  * Linear index for 3D -> 1D mapping used in physics arrays
@@ -100,4 +101,81 @@ export function allocPacketScratch(N) {
     pY: new Float32Array(N),
     pZ: new Float32Array(N),
   };
+}
+
+/**
+ * Create a minimal simulation context for testing.
+ * Returns { N, L, dx, cellVol, size, coord, psiRe, psiIm, V, kArrays, sRe, sIm }
+ */
+export function createTestSimContext(N = 8, L = 10) {
+  const dx = L / N;
+  const cellVol = dx * dx * dx;
+  const size = N * N * N;
+  const coord = createCoordinateArray(N, L);
+  const psiRe = new Float32Array(size);
+  const psiIm = new Float32Array(size);
+  const V = new Float32Array(size);
+  const kArrays = createKSpaceArrays(N, L);
+  const sRe = new Float32Array(N);
+  const sIm = new Float32Array(N);
+  return { N, L, dx, cellVol, size, coord, psiRe, psiIm, V, kArrays, sRe, sIm };
+}
+
+/**
+ * Create exponential arrays for simulation testing.
+ * Returns { expK, expVh }
+ */
+export function createTestExponentials(size) {
+  return {
+    expK: new Float32Array(2 * size),
+    expVh: new Float32Array(2 * size),
+  };
+}
+
+/**
+ * Create a pair of 3D complex arrays for FFT testing.
+ * Returns { re, im } with optional randomization.
+ */
+export function create3dArrayPair(N, randomize = false) {
+  const size = N * N * N;
+  const re = new Float32Array(size);
+  const im = new Float32Array(size);
+  if (randomize) fillRandomPair(re, im);
+  return { re, im, size };
+}
+
+/**
+ * Create two pairs of 3D arrays for comparison tests.
+ * Initializes both pairs with the same random data.
+ */
+export function create3dArrayPairs(N) {
+  const size = N * N * N;
+  const re1 = new Float32Array(size);
+  const im1 = new Float32Array(size);
+  fillRandomPair(re1, im1);
+  const re2 = re1.slice();
+  const im2 = im1.slice();
+  return { re1, im1, re2, im2, size };
+}
+
+/**
+ * Create scratch arrays for FFT line transforms.
+ */
+export function createLineScratch(N) {
+  return {
+    lineRe: new Float32Array(N),
+    lineIm: new Float32Array(N),
+  };
+}
+
+/**
+ * Assert two complex arrays are equal within tolerance.
+ */
+export function expectArraysClose(re1, im1, re2, im2, tolerance = 1e-10) {
+  const n = re1.length;
+  for (let i = 0; i < n; i++) {
+    if (Math.abs(re1[i] - re2[i]) >= tolerance || Math.abs(im1[i] - im2[i]) >= tolerance) {
+      throw new Error(`Arrays differ at index ${i}: (${re1[i]}, ${im1[i]}) vs (${re2[i]}, ${im2[i]})`);
+    }
+  }
 }
