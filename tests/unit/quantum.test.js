@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { lin, fillRandomPair, rmsRelativeErrorComplex as rmsRel } from '../utils/testUtils.js';
+import { lin, fillRandomPair, rmsRelativeErrorComplex as rmsRel, allocPacketScratch } from '../utils/testUtils.js';
 import {
   createCoordinateArray,
   createKSpaceArrays,
@@ -42,24 +42,11 @@ describe('quantum.js', () => {
     const psiRe = new Float32Array(size);
     const psiIm = new Float32Array(size);
 
-    const gX = new Float32Array(N);
-    const gY = new Float32Array(N);
-    const gZ = new Float32Array(N);
-    const pX = new Float32Array(N);
-    const pY = new Float32Array(N);
-    const pZ = new Float32Array(N);
-
+    const { gX, gY, gZ, pX, pY, pZ } = allocPacketScratch(N);
     const sigma = 0.6;
-    const kx = (2 * Math.PI) / (8 * dx); // ~8 ppw
+    const kx = (2 * Math.PI) / (8 * dx);
 
-    addPacket3D(
-      psiRe, psiIm, coord, N,
-      0, 0, 0,
-      sigma, sigma, sigma,
-      kx, 0, 0,
-      1,
-      gX, gY, gZ, pX, pY, pZ
-    );
+    addPacket3D(psiRe, psiIm, coord, N, 0, 0, 0, sigma, sigma, sigma, kx, 0, 0, 1, gX, gY, gZ, pX, pY, pZ);
 
     renormalize(psiRe, psiIm, cellVol);
     const norm0 = calculateNorm(psiRe, psiIm, cellVol);
@@ -454,21 +441,9 @@ describe('quantum.js', () => {
     const psiRe = new Float32Array(size);
     const psiIm = new Float32Array(size);
 
-    const gX = new Float32Array(N);
-    const gY = new Float32Array(N);
-    const gZ = new Float32Array(N);
-    const pX = new Float32Array(N);
-    const pY = new Float32Array(N);
-    const pZ = new Float32Array(N);
+    const { gX, gY, gZ, pX, pY, pZ } = allocPacketScratch(N);
 
-    addPacket3D(
-      psiRe, psiIm, coord, N,
-      0, 0, 0, // center
-      0.6, 0.6, 0.6, // widths
-      0, 0, 0, // k
-      1,
-      gX, gY, gZ, pX, pY, pZ
-    );
+    addPacket3D(psiRe, psiIm, coord, N, 0, 0, 0, 0.6, 0.6, 0.6, 0, 0, 0, 1, gX, gY, gZ, pX, pY, pZ);
 
     // find argmax index
     let maxV = -Infinity, maxI = -1;
@@ -523,21 +498,10 @@ describe('quantum.js', () => {
     const psiRe = new Float32Array(size - 1); // wrong size
     const psiIm = new Float32Array(size);
 
-    const gX = new Float32Array(N);
-    const gY = new Float32Array(N);
-    const gZ = new Float32Array(N);
-    const pX = new Float32Array(N);
-    const pY = new Float32Array(N);
-    const pZ = new Float32Array(N);
+    const { gX, gY, gZ, pX, pY, pZ } = allocPacketScratch(N);
 
-    expect(() => addPacket3D(
-      psiRe, psiIm, coord, N,
-      0, 0, 0,
-      0.6, 0.6, 0.6,
-      0, 0, 0,
-      1,
-      gX, gY, gZ, pX, pY, pZ
-    )).toThrow(/psi arrays must have length N³/);
+    expect(() => addPacket3D(psiRe, psiIm, coord, N, 0, 0, 0, 0.6, 0.6, 0.6, 0, 0, 0, 1, gX, gY, gZ, pX, pY, pZ))
+      .toThrow(/psi arrays must have length N³/);
   });
 
   it('addPacket3D throws for coord array with wrong length', () => {
@@ -548,21 +512,10 @@ describe('quantum.js', () => {
     const psiRe = new Float32Array(size);
     const psiIm = new Float32Array(size);
 
-    const gX = new Float32Array(N);
-    const gY = new Float32Array(N);
-    const gZ = new Float32Array(N);
-    const pX = new Float32Array(N);
-    const pY = new Float32Array(N);
-    const pZ = new Float32Array(N);
+    const { gX, gY, gZ, pX, pY, pZ } = allocPacketScratch(N);
 
-    expect(() => addPacket3D(
-      psiRe, psiIm, coord, N,
-      0, 0, 0,
-      0.6, 0.6, 0.6,
-      0, 0, 0,
-      1,
-      gX, gY, gZ, pX, pY, pZ
-    )).toThrow(/coord.length.*!== N/);
+    expect(() => addPacket3D(psiRe, psiIm, coord, N, 0, 0, 0, 0.6, 0.6, 0.6, 0, 0, 0, 1, gX, gY, gZ, pX, pY, pZ))
+      .toThrow(/coord.length.*!== N/);
   });
 
   it('addPacket3D throws for scratch arrays that are too small', () => {
@@ -573,22 +526,12 @@ describe('quantum.js', () => {
     const psiRe = new Float32Array(size);
     const psiIm = new Float32Array(size);
 
-    // one scratch array too small
+    // one scratch array too small - intentionally allocate manually
     const gX = new Float32Array(N - 1); // too small
-    const gY = new Float32Array(N);
-    const gZ = new Float32Array(N);
-    const pX = new Float32Array(N);
-    const pY = new Float32Array(N);
-    const pZ = new Float32Array(N);
+    const { gY, gZ, pX, pY, pZ } = { gY: new Float32Array(N), gZ: new Float32Array(N), pX: new Float32Array(N), pY: new Float32Array(N), pZ: new Float32Array(N) };
 
-    expect(() => addPacket3D(
-      psiRe, psiIm, coord, N,
-      0, 0, 0,
-      0.6, 0.6, 0.6,
-      0, 0, 0,
-      1,
-      gX, gY, gZ, pX, pY, pZ
-    )).toThrow(/scratch arrays must have length/);
+    expect(() => addPacket3D(psiRe, psiIm, coord, N, 0, 0, 0, 0.6, 0.6, 0.6, 0, 0, 0, 1, gX, gY, gZ, pX, pY, pZ))
+      .toThrow(/scratch arrays must have length/);
   });
 
   it('addPacket3D throws for non-positive widths', () => {
@@ -600,21 +543,10 @@ describe('quantum.js', () => {
     const psiRe = new Float32Array(size);
     const psiIm = new Float32Array(size);
 
-    const gX = new Float32Array(N);
-    const gY = new Float32Array(N);
-    const gZ = new Float32Array(N);
-    const pX = new Float32Array(N);
-    const pY = new Float32Array(N);
-    const pZ = new Float32Array(N);
+    const { gX, gY, gZ, pX, pY, pZ } = allocPacketScratch(N);
 
-    expect(() => addPacket3D(
-      psiRe, psiIm, coord, N,
-      0, 0, 0,
-      0, 0.6, 0.6,
-      0, 0, 0,
-      1,
-      gX, gY, gZ, pX, pY, pZ
-    )).toThrow(/positive widths/i);
+    expect(() => addPacket3D(psiRe, psiIm, coord, N, 0, 0, 0, 0, 0.6, 0.6, 0, 0, 0, 1, gX, gY, gZ, pX, pY, pZ))
+      .toThrow(/positive widths/i);
   });
 
   it('renormalize throws when psiRe and psiIm lengths differ', () => {
@@ -633,8 +565,7 @@ describe('quantum.js', () => {
     const psiIm = new Float32Array(size);
 
     const coord = createCoordinateArray(N, L);
-    const gX = new Float32Array(N), gY = new Float32Array(N), gZ = new Float32Array(N);
-    const pX = new Float32Array(N), pY = new Float32Array(N), pZ = new Float32Array(N);
+    const { gX, gY, gZ, pX, pY, pZ } = allocPacketScratch(N);
 
     addPacket3D(psiRe, psiIm, coord, N, 0, 0, 0, 0.6, 0.6, 0.6, 0, 0, 0, 1, gX, gY, gZ, pX, pY, pZ);
     const cellVol = Math.pow(L / N, 3);
@@ -659,23 +590,9 @@ describe('quantum.js', () => {
     const psiRe = new Float32Array(size);
     const psiIm = new Float32Array(size);
 
-    const gX = new Float32Array(N);
-    const gY = new Float32Array(N);
-    const gZ = new Float32Array(N);
-    const pX = new Float32Array(N);
-    const pY = new Float32Array(N);
-    const pZ = new Float32Array(N);
-
-    const cx = 0, cy = 0, cz = 0;
-    const kx = 0.5, ky = 0, kz = 0;
-    addPacket3D(
-      psiRe, psiIm, coord, N,
-      cx, cy, cz,
-      0.6, 0.6, 0.6,
-      kx, ky, kz,
-      1,
-      gX, gY, gZ, pX, pY, pZ
-    );
+    const { gX, gY, gZ, pX, pY, pZ } = allocPacketScratch(N);
+    const kx = 0.5;
+    addPacket3D(psiRe, psiIm, coord, N, 0, 0, 0, 0.6, 0.6, 0.6, kx, 0, 0, 1, gX, gY, gZ, pX, pY, pZ);
 
     // pick two adjacent x cells around the center (x=3 -> -0.5, x=4 -> 0.5)
     const y = 3, z = 3;
@@ -733,22 +650,9 @@ describe('quantum.js', () => {
     const sigma = 0.6;
     const cx = -L / 4;
     const kx = (2 * Math.PI) / (8 * dx);
+    const { gX, gY, gZ, pX, pY, pZ } = allocPacketScratch(N);
 
-    const gX = new Float32Array(N);
-    const gY = new Float32Array(N);
-    const gZ = new Float32Array(N);
-    const pX = new Float32Array(N);
-    const pY = new Float32Array(N);
-    const pZ = new Float32Array(N);
-
-    addPacket3D(
-      baseRe, baseIm, coord, N,
-      cx, 0, 0,
-      sigma, sigma, sigma,
-      kx, 0, 0,
-      1,
-      gX, gY, gZ, pX, pY, pZ
-    );
+    addPacket3D(baseRe, baseIm, coord, N, cx, 0, 0, sigma, sigma, sigma, kx, 0, 0, 1, gX, gY, gZ, pX, pY, pZ);
     renormalize(baseRe, baseIm, cellVol);
 
     const kArrays = createKSpaceArrays(N, L);
@@ -883,24 +787,10 @@ describe('quantum.js', () => {
     const psiIm = new Float32Array(size);
     const V = new Float32Array(size); // free particle: V=0
 
-    const gX = new Float32Array(N);
-    const gY = new Float32Array(N);
-    const gZ = new Float32Array(N);
-    const pX = new Float32Array(N);
-    const pY = new Float32Array(N);
-    const pZ = new Float32Array(N);
-
-    // create a wave packet with momentum
+    const { gX, gY, gZ, pX, pY, pZ } = allocPacketScratch(N);
     const sigma = 0.8;
     const kx = 2.0;
-    addPacket3D(
-      psiRe, psiIm, coord, N,
-      0, 0, 0,
-      sigma, sigma, sigma,
-      kx, 0, 0,
-      1,
-      gX, gY, gZ, pX, pY, pZ
-    );
+    addPacket3D(psiRe, psiIm, coord, N, 0, 0, 0, sigma, sigma, sigma, kx, 0, 0, 1, gX, gY, gZ, pX, pY, pZ);
     renormalize(psiRe, psiIm, cellVol);
 
     const kArrays = createKSpaceArrays(N, L);
@@ -948,23 +838,9 @@ describe('quantum.js', () => {
     const psiIm = new Float32Array(size);
     const V = new Float32Array(size); // V=0 for free particle
 
-    const gX = new Float32Array(N);
-    const gY = new Float32Array(N);
-    const gZ = new Float32Array(N);
-    const pX = new Float32Array(N);
-    const pY = new Float32Array(N);
-    const pZ = new Float32Array(N);
-
-    // initial state: Gaussian with σ₀ = 1.5, no momentum (k=0)
+    const { gX, gY, gZ, pX, pY, pZ } = allocPacketScratch(N);
     const sigma0 = 1.5;
-    addPacket3D(
-      psiRe, psiIm, coord, N,
-      0, 0, 0,
-      sigma0, sigma0, sigma0,
-      0, 0, 0, // k=0 for stationary center
-      1,
-      gX, gY, gZ, pX, pY, pZ
-    );
+    addPacket3D(psiRe, psiIm, coord, N, 0, 0, 0, sigma0, sigma0, sigma0, 0, 0, 0, 1, gX, gY, gZ, pX, pY, pZ);
     renormalize(psiRe, psiIm, cellVol);
 
     // measure RMS width (compute √⟨x²⟩)
@@ -1111,21 +987,8 @@ describe('quantum.js', () => {
     const psiIm = new Float32Array(size);
     const V = new Float32Array(size);
 
-    const gX = new Float32Array(N);
-    const gY = new Float32Array(N);
-    const gZ = new Float32Array(N);
-    const pX = new Float32Array(N);
-    const pY = new Float32Array(N);
-    const pZ = new Float32Array(N);
-
-    addPacket3D(
-      psiRe, psiIm, coord, N,
-      0, 0, 0,
-      0.8, 0.8, 0.8,
-      3, 0, 0, // moving towards boundary
-      1,
-      gX, gY, gZ, pX, pY, pZ
-    );
+    const { gX, gY, gZ, pX, pY, pZ } = allocPacketScratch(N);
+    addPacket3D(psiRe, psiIm, coord, N, 0, 0, 0, 0.8, 0.8, 0.8, 3, 0, 0, 1, gX, gY, gZ, pX, pY, pZ);
     renormalize(psiRe, psiIm, cellVol);
 
     const kArrays = createKSpaceArrays(N, L);

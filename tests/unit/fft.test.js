@@ -1,5 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
-import { rmsRelativeErrorComplex as rmsRelativeError, fillRandomPair, expectFft1dPlanEquivalence, compute3dRoundTripError } from '../utils/testUtils.js';
+import {
+  rmsRelativeErrorComplex as rmsRelativeError,
+  fillRandomPair,
+  expectFft1dPlanEquivalence,
+  compute3dRoundTripError,
+  create3dArrayPair,
+  create3dArrayPairs,
+  createLineScratch,
+  expectArraysClose,
+} from '../utils/testUtils.js';
 import { fft1d, fft3d, fft3d_p, cMul, cExp, makeFFTPlan, fft1d_p, runFFTSelfTests } from '../../src/physics/fft.js';
 
 // rmsRelativeError and fillRandomPair moved to tests/utils/testUtils.js
@@ -131,96 +140,50 @@ describe('fft.js', () => {
 
   it('fft3d_p with valid plan matches fft3d', () => {
     const N = 8;
-    const size = N * N * N;
-    const re1 = new Float32Array(size);
-    const im1 = new Float32Array(size);
-    const re2 = new Float32Array(size);
-    const im2 = new Float32Array(size);
-
-    fillRandomPair(re1, im1);
-    re2.set(re1);
-    im2.set(im1);
-
-    const lineRe = new Float32Array(N);
-    const lineIm = new Float32Array(N);
+    const { re1, im1, re2, im2 } = create3dArrayPairs(N);
+    const { lineRe, lineIm } = createLineScratch(N);
     const plan = makeFFTPlan(N);
 
-    // forward transform with both methods
     fft3d(re1, im1, N, false, lineRe, lineIm);
     fft3d_p(re2, im2, N, false, lineRe, lineIm, plan);
 
-    const err = rmsRelativeError(re1, im1, re2, im2);
-    expect(err).toBeLessThan(1e-5);
+    expect(rmsRelativeError(re1, im1, re2, im2)).toBeLessThan(1e-5);
   });
 
   it('fft3d_p round-trip with plan preserves data', () => {
     const N = 8;
-    const size = N * N * N;
-    const re = new Float32Array(size);
-    const im = new Float32Array(size);
-    fillRandomPair(re, im);
-
+    const { re, im } = create3dArrayPair(N, true);
     const r0 = re.slice();
     const i0 = im.slice();
-
-    const lineRe = new Float32Array(N);
-    const lineIm = new Float32Array(N);
+    const { lineRe, lineIm } = createLineScratch(N);
     const plan = makeFFTPlan(N);
 
-    // forward then inverse
     fft3d_p(re, im, N, false, lineRe, lineIm, plan);
     fft3d_p(re, im, N, true, lineRe, lineIm, plan);
 
-    const err = rmsRelativeError(re, im, r0, i0);
-    expect(err).toBeLessThan(1e-5);
+    expect(rmsRelativeError(re, im, r0, i0)).toBeLessThan(1e-5);
   });
 
   it('fft3d_p falls back to fft3d when plan is null', () => {
     const N = 8;
-    const size = N * N * N;
-    const re1 = new Float32Array(size);
-    const im1 = new Float32Array(size);
-    const re2 = new Float32Array(size);
-    const im2 = new Float32Array(size);
-
-    fillRandomPair(re1, im1);
-    re2.set(re1);
-    im2.set(im1);
-
-    const lineRe = new Float32Array(N);
-    const lineIm = new Float32Array(N);
+    const { re1, im1, re2, im2 } = create3dArrayPairs(N);
+    const { lineRe, lineIm } = createLineScratch(N);
 
     fft3d(re1, im1, N, false, lineRe, lineIm);
-    fft3d_p(re2, im2, N, false, lineRe, lineIm, null); // null plan triggers fallback
+    fft3d_p(re2, im2, N, false, lineRe, lineIm, null);
 
-    for (let i = 0; i < size; i++) {
-      expect(Math.abs(re1[i] - re2[i])).toBeLessThan(1e-10);
-      expect(Math.abs(im1[i] - im2[i])).toBeLessThan(1e-10);
-    }
+    expectArraysClose(re1, im1, re2, im2);
   });
 
   it('fft3d_p falls back to fft3d when plan has wrong N', () => {
     const N = 8;
-    const size = N * N * N;
-    const re1 = new Float32Array(size);
-    const im1 = new Float32Array(size);
-    const re2 = new Float32Array(size);
-    const im2 = new Float32Array(size);
-
-    fillRandomPair(re1, im1);
-    re2.set(re1);
-    im2.set(im1);
-
-    const lineRe = new Float32Array(N);
-    const lineIm = new Float32Array(N);
-    const wrongPlan = makeFFTPlan(4); // Wrong size plan
+    const { re1, im1, re2, im2 } = create3dArrayPairs(N);
+    const { lineRe, lineIm } = createLineScratch(N);
+    const wrongPlan = makeFFTPlan(4);
 
     fft3d(re1, im1, N, false, lineRe, lineIm);
     fft3d_p(re2, im2, N, false, lineRe, lineIm, wrongPlan);
 
-    for (let i = 0; i < size; i++) {
-      expect(Math.abs(re1[i] - re2[i])).toBeLessThan(1e-10);
-      expect(Math.abs(im1[i] - im2[i])).toBeLessThan(1e-10);
-    }
+    expectArraysClose(re1, im1, re2, im2);
   });
 });
