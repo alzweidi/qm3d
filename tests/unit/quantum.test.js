@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { lin, fillRandomPair, rmsRelativeErrorComplex as rmsRel, allocPacketScratch } from '../utils/testUtils.js';
+import { lin, fillRandomPair, rmsRelativeErrorComplex as rmsRel, createSimState } from '../utils/testUtils.js';
 import { presetHarmonic } from '../../src/physics/potentials.js';
 import {
   createCoordinateArray,
@@ -45,89 +45,37 @@ describe('quantum.js', () => {
   });
 
   it('renormalize after addPacket keeps norm ≈ 1 over time with CAP off', () => {
-    const N = 16;
-    const L = 8;
-    const dx = L / N;
-    const cellVol = dx * dx * dx;
+    const st = createSimState(16, 8);
+    const { N, L, dx, cellVol, psiRe, psiIm, V, expK, expVh, sRe, sIm, gX, gY, gZ, pX, pY, pZ } = st;
     const coord = createCoordinateArray(N, L);
 
-    const size = N * N * N;
-    const psiRe = new Float32Array(size);
-    const psiIm = new Float32Array(size);
-
-    const gX = new Float32Array(N);
-    const gY = new Float32Array(N);
-    const gZ = new Float32Array(N);
-    const pX = new Float32Array(N);
-    const pY = new Float32Array(N);
-    const pZ = new Float32Array(N);
-
     const sigma = 0.6;
-    const kx = (2 * Math.PI) / (8 * dx); // ~8 ppw
-
-    addPacket3D(
-      psiRe, psiIm, coord, N,
-      0, 0, 0,
-      sigma, sigma, sigma,
-      kx, 0, 0,
-      1,
-      gX, gY, gZ, pX, pY, pZ
-    );
+    const kx = (2 * Math.PI) / (8 * dx);
+    addPacket3D(psiRe, psiIm, coord, N, 0, 0, 0, sigma, sigma, sigma, kx, 0, 0, 1, gX, gY, gZ, pX, pY, pZ);
 
     renormalize(psiRe, psiIm, cellVol);
-    const norm0 = calculateNorm(psiRe, psiIm, cellVol);
-    expect(norm0).toBeCloseTo(1, 6);
+    expect(calculateNorm(psiRe, psiIm, cellVol)).toBeCloseTo(1, 6);
 
     const kArrays = createKSpaceArrays(N, L);
-    const expK = new Float32Array(2 * size);
-    const expVh = new Float32Array(2 * size);
-    const cap = createAbsorbingBoundary(N, 0); // CAP off
     const dt = 0.02 * dx * dx;
-
     buildKineticExponentials(expK, kArrays, N, dt);
-    buildPotentialExponentials(expVh, new Float32Array(size), cap, dt, 0);
+    buildPotentialExponentials(expVh, V, null, dt, 0);
 
-    const sRe = new Float32Array(N);
-    const sIm = new Float32Array(N);
     for (let i = 0; i < 200; i++) {
       timeStep(psiRe, psiIm, expVh, expK, N, sRe, sIm);
     }
-    const normT = calculateNorm(psiRe, psiIm, cellVol);
-    expect(normT).toBeCloseTo(1, 4);
+    expect(calculateNorm(psiRe, psiIm, cellVol)).toBeCloseTo(1, 4);
   });
 
   it('super-Nyquist kx aliases to DC bin in FFT (motivates UI clamp)', () => {
-    const N = 32;
-    const L = 10;
-    const dx = L / N;
+    const st = createSimState(32, 10);
+    const { N, L, dx, size, psiRe, psiIm, sRe, sIm, gX, gY, gZ, pX, pY, pZ } = st;
     const coord = createCoordinateArray(N, L);
-
-    const size = N * N * N;
-    const psiRe = new Float32Array(size);
-    const psiIm = new Float32Array(size);
-
-    const { gX, gY, gZ, pX, pY, pZ } = {
-      gX: new Float32Array(N),
-      gY: new Float32Array(N),
-      gZ: new Float32Array(N),
-      pX: new Float32Array(N),
-      pY: new Float32Array(N),
-      pZ: new Float32Array(N),
-    };
 
     // Set kx to 2π/dx = 2π * N / L, which aliases to m=0 on the discrete grid
     const kx = 2 * Math.PI / dx;
-    addPacket3D(
-      psiRe, psiIm, coord, N,
-      0, 0, 0,
-      0.6, 0.6, 0.6,
-      kx, 0, 0,
-      1,
-      gX, gY, gZ, pX, pY, pZ
-    );
+    addPacket3D(psiRe, psiIm, coord, N, 0, 0, 0, 0.6, 0.6, 0.6, kx, 0, 0, 1, gX, gY, gZ, pX, pY, pZ);
 
-    const sRe = new Float32Array(N);
-    const sIm = new Float32Array(N);
     fft3d(psiRe, psiIm, N, false, sRe, sIm);
 
     // Find argmax in spectrum
@@ -560,40 +508,20 @@ describe('quantum.js', () => {
   });
 
   it('energy drift is small over time for free propagation (CAP off)', () => {
-    const N = 16;
-    const L = 8;
-    const dx = L / N;
-    const cellVol = dx * dx * dx;
+    const st = createSimState(16, 8);
+    const { N, L, dx, cellVol, psiRe, psiIm, V, expK, expVh, sRe, sIm, gX, gY, gZ, pX, pY, pZ } = st;
     const coord = createCoordinateArray(N, L);
-
-    const size = N * N * N;
-    const psiRe = new Float32Array(size);
-    const psiIm = new Float32Array(size);
-    const { gX, gY, gZ, pX, pY, pZ } = allocPacketScratch(N);
 
     const sigma = 0.6;
     const kx = (2 * Math.PI) / (8 * dx);
-    addPacket3D(
-      psiRe, psiIm, coord, N,
-      0, 0, 0,
-      sigma, sigma, sigma,
-      kx, 0, 0,
-      1,
-      gX, gY, gZ, pX, pY, pZ
-    );
+    addPacket3D(psiRe, psiIm, coord, N, 0, 0, 0, sigma, sigma, sigma, kx, 0, 0, 1, gX, gY, gZ, pX, pY, pZ);
     renormalize(psiRe, psiIm, cellVol);
 
     const kArrays = createKSpaceArrays(N, L);
-    const expK = new Float32Array(2 * size);
-    const expVh = new Float32Array(2 * size);
-    const cap = createAbsorbingBoundary(N, 0);
     const dt = 0.02 * dx * dx;
-    const V = new Float32Array(size);
     buildKineticExponentials(expK, kArrays, N, dt);
-    buildPotentialExponentials(expVh, V, cap, dt, 0);
+    buildPotentialExponentials(expVh, V, null, dt, 0);
 
-    const sRe = new Float32Array(N);
-    const sIm = new Float32Array(N);
     const E0 = calculateEnergy(psiRe, psiIm, V, N, L);
     for (let i = 0; i < 200; i++) {
       timeStep(psiRe, psiIm, expVh, expK, N, sRe, sIm);
@@ -604,49 +532,27 @@ describe('quantum.js', () => {
   });
 
   it('timeStep is approximately time-reversible for free propagation (CAP off)', () => {
-    const N = 16;
-    const L = 8;
-    const dx = L / N;
-    const cellVol = dx * dx * dx;
+    const st = createSimState(16, 8);
+    const { N, L, dx, cellVol, size, psiRe, psiIm, V, expK, expVh, sRe, sIm, gX, gY, gZ, pX, pY, pZ } = st;
     const coord = createCoordinateArray(N, L);
-
-    const size = N * N * N;
-    const psiRe = new Float32Array(size);
-    const psiIm = new Float32Array(size);
-    const { gX, gY, gZ, pX, pY, pZ } = allocPacketScratch(N);
 
     const sigma = 0.6;
     const kx = (2 * Math.PI) / (8 * dx);
-    addPacket3D(
-      psiRe, psiIm, coord, N,
-      0, 0, 0,
-      sigma, sigma, sigma,
-      kx, 0, 0,
-      1,
-      gX, gY, gZ, pX, pY, pZ
-    );
+    addPacket3D(psiRe, psiIm, coord, N, 0, 0, 0, sigma, sigma, sigma, kx, 0, 0, 1, gX, gY, gZ, pX, pY, pZ);
     renormalize(psiRe, psiIm, cellVol);
 
     const psiRe0 = psiRe.slice();
     const psiIm0 = psiIm.slice();
 
     const kArrays = createKSpaceArrays(N, L);
-    const cap = createAbsorbingBoundary(N, 0);
     const dt = 0.02 * dx * dx;
-    const V = new Float32Array(size);
-
-    const expK = new Float32Array(2 * size);
-    const expVh = new Float32Array(2 * size);
     buildKineticExponentials(expK, kArrays, N, dt);
-    buildPotentialExponentials(expVh, V, cap, dt, 0);
+    buildPotentialExponentials(expVh, V, null, dt, 0);
 
     const expKBack = new Float32Array(2 * size);
     const expVhBack = new Float32Array(2 * size);
     buildKineticExponentials(expKBack, kArrays, N, -dt);
-    buildPotentialExponentials(expVhBack, V, cap, -dt, 0);
-
-    const sRe = new Float32Array(N);
-    const sIm = new Float32Array(N);
+    buildPotentialExponentials(expVhBack, V, null, -dt, 0);
 
     for (let i = 0; i < 60; i++) {
       timeStep(psiRe, psiIm, expVh, expK, N, sRe, sIm);
@@ -744,42 +650,19 @@ describe('quantum.js', () => {
   });
 
   it('CAP min-width reduces slab probability versus thin 1-cell CAP', () => {
-    const N = 16;
-    const L = 8;
-    const dx = L / N;
-    const cellVol = dx * dx * dx;
+    const st = createSimState(16, 8);
+    const { N, L, dx, cellVol, size, psiRe: baseRe, psiIm: baseIm, V, expK, gX, gY, gZ, pX, pY, pZ } = st;
     const coord = createCoordinateArray(N, L);
-
-    const size = N * N * N;
-    const baseRe = new Float32Array(size);
-    const baseIm = new Float32Array(size);
 
     const sigma = 0.6;
     const cx = -L / 4;
     const kx = (2 * Math.PI) / (8 * dx);
-
-    const gX = new Float32Array(N);
-    const gY = new Float32Array(N);
-    const gZ = new Float32Array(N);
-    const pX = new Float32Array(N);
-    const pY = new Float32Array(N);
-    const pZ = new Float32Array(N);
-
-    addPacket3D(
-      baseRe, baseIm, coord, N,
-      cx, 0, 0,
-      sigma, sigma, sigma,
-      kx, 0, 0,
-      1,
-      gX, gY, gZ, pX, pY, pZ
-    );
+    addPacket3D(baseRe, baseIm, coord, N, cx, 0, 0, sigma, sigma, sigma, kx, 0, 0, 1, gX, gY, gZ, pX, pY, pZ);
     renormalize(baseRe, baseIm, cellVol);
 
     const kArrays = createKSpaceArrays(N, L);
     const dt = 0.02 * dx * dx;
-    const expK = new Float32Array(2 * size);
     buildKineticExponentials(expK, kArrays, N, dt);
-    const V = new Float32Array(size);
 
     function simulateWithCap(cap) {
       const psiRe = baseRe.slice();
@@ -860,40 +743,22 @@ describe('quantum.js', () => {
   });
 
   it('free packet center moves with group velocity ~ kx', () => {
-    const N = 32;
-    const L = 20;
-    const dx = L / N;
-    const cellVol = dx * dx * dx;
+    const st = createSimState(32, 20);
+    const { N, L, dx, cellVol, psiRe, psiIm, V, expK, expVh, sRe, sIm, gX, gY, gZ, pX, pY, pZ } = st;
     const coord = createCoordinateArray(N, L);
-    const size = N * N * N;
-
-    const psiRe = new Float32Array(size);
-    const psiIm = new Float32Array(size);
-    const { gX, gY, gZ, pX, pY, pZ } = allocPacketScratch(N);
 
     const x0 = -L / 4;
     const kx = 1.0;
-    addPacket3D(
-      psiRe, psiIm, coord, N,
-      x0, 0, 0,
-      0.7, 0.7, 0.7,
-      kx, 0, 0,
-      1,
-      gX, gY, gZ, pX, pY, pZ
-    );
+    addPacket3D(psiRe, psiIm, coord, N, x0, 0, 0, 0.7, 0.7, 0.7, kx, 0, 0, 1, gX, gY, gZ, pX, pY, pZ);
     renormalize(psiRe, psiIm, cellVol);
 
     const mean0 = meanX(psiRe, psiIm, coord, N, cellVol);
 
     const kArrays = createKSpaceArrays(N, L);
-    const expK = new Float32Array(2 * size);
-    const expVh = new Float32Array(2 * size);
     const dt = 0.02 * dx * dx;
     buildKineticExponentials(expK, kArrays, N, dt);
-    buildPotentialExponentials(expVh, new Float32Array(size), null, dt, 0);
+    buildPotentialExponentials(expVh, V, null, dt, 0);
 
-    const sRe = new Float32Array(N);
-    const sIm = new Float32Array(N);
     const steps = 60;
     for (let i = 0; i < steps; i++) {
       timeStep(psiRe, psiIm, expVh, expK, N, sRe, sIm);
@@ -908,41 +773,22 @@ describe('quantum.js', () => {
   });
 
   it('harmonic potential pulls packet center toward origin', () => {
-    const N = 32;
-    const L = 20;
-    const dx = L / N;
-    const cellVol = dx * dx * dx;
+    const st = createSimState(32, 20);
+    const { N, L, dx, cellVol, psiRe, psiIm, V, expK, expVh, sRe, sIm, gX, gY, gZ, pX, pY, pZ } = st;
     const coord = createCoordinateArray(N, L);
-    const size = N * N * N;
-
-    const psiRe = new Float32Array(size);
-    const psiIm = new Float32Array(size);
-    const { gX, gY, gZ, pX, pY, pZ } = allocPacketScratch(N);
 
     const x0 = -L / 5;
-    addPacket3D(
-      psiRe, psiIm, coord, N,
-      x0, 0, 0,
-      0.7, 0.7, 0.7,
-      0, 0, 0,
-      1,
-      gX, gY, gZ, pX, pY, pZ
-    );
+    addPacket3D(psiRe, psiIm, coord, N, x0, 0, 0, 0.7, 0.7, 0.7, 0, 0, 0, 1, gX, gY, gZ, pX, pY, pZ);
     renormalize(psiRe, psiIm, cellVol);
 
     const mean0 = meanX(psiRe, psiIm, coord, N, cellVol);
 
-    const V = new Float32Array(size);
     presetHarmonic(V, coord, N, 1);
     const kArrays = createKSpaceArrays(N, L);
-    const expK = new Float32Array(2 * size);
-    const expVh = new Float32Array(2 * size);
     const dt = 0.02 * dx * dx;
     buildKineticExponentials(expK, kArrays, N, dt);
     buildPotentialExponentials(expVh, V, null, dt, 0);
 
-    const sRe = new Float32Array(N);
-    const sIm = new Float32Array(N);
     const steps = 50;
     for (let i = 0; i < steps; i++) {
       timeStep(psiRe, psiIm, expVh, expK, N, sRe, sIm);

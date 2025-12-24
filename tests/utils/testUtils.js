@@ -101,3 +101,28 @@ export function allocPacketScratch(N) {
     pZ: new Float32Array(N),
   };
 }
+
+/**
+ * Create a standard simulation state for time-stepping tests.
+ * Returns all the arrays and parameters needed for timeStep.
+ */
+export function createSimState(N, L) {
+  const dx = L / N;
+  const cellVol = dx * dx * dx;
+  const size = N * N * N;
+  return {
+    N,
+    L,
+    dx,
+    cellVol,
+    size,
+    psiRe: new Float32Array(size),
+    psiIm: new Float32Array(size),
+    V: new Float32Array(size),
+    expK: new Float32Array(2 * size),
+    expVh: new Float32Array(2 * size),
+    sRe: new Float32Array(N),
+    sIm: new Float32Array(N),
+    ...allocPacketScratch(N),
+  };
+}
