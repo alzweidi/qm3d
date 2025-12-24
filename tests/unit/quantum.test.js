@@ -13,6 +13,7 @@ import {
   addPacket3D,
   renormalize,
   calculateNorm,
+  calculateEnergy
 } from '../../src/physics/quantum.js';
 import { fft3d } from '../../src/physics/fft.js';
 
@@ -512,6 +513,165 @@ describe('quantum.js', () => {
     renormalize(zRe, zIm, cellVol);
     const zn = calculateNorm(zRe, zIm, cellVol);
     expect(zn).toBe(0);
+  });
+
+  it('calculateEnergy is zero for the all-zero state (V null)', () => {
+    const N = 8;
+    const L = 8;
+    const size = N * N * N;
+    const psiRe = new Float32Array(size);
+    const psiIm = new Float32Array(size);
+    const E = calculateEnergy(psiRe, psiIm, null, N, L);
+    expect(E).toBeCloseTo(0, 12);
+  });
+
+  it('calculateEnergy matches 0.5*k^2 for a free plane wave', () => {
+    const N = 32;
+    const L = 10;
+    const size = N * N * N;
+    const psiRe = new Float32Array(size);
+    const psiIm = new Float32Array(size);
+    const V = new Float32Array(size);
+
+    const coord = createCoordinateArray(N, L);
+    const m = 3;
+    const kx = (2 * Math.PI / L) * m;
+    const amp = 1 / Math.sqrt(L * L * L);
+
+    for (let z = 0; z < N; z++) {
+      const zOff = N * N * z;
+      for (let y = 0; y < N; y++) {
+        const yOff = zOff + N * y;
+        for (let x = 0; x < N; x++) {
+          const id = yOff + x;
+          const phase = kx * coord[x];
+          psiRe[id] = amp * Math.cos(phase);
+          psiIm[id] = amp * Math.sin(phase);
+        }
+      }
+    }
+
+    const dx = L / N;
+    const cellVol = dx * dx * dx;
+    expect(calculateNorm(psiRe, psiIm, cellVol)).toBeCloseTo(1, 4);
+
+    const E = calculateEnergy(psiRe, psiIm, V, N, L);
+    expect(E).toBeCloseTo(0.5 * kx * kx, 4);
+  });
+
+  it('energy drift is small over time for free propagation (CAP off)', () => {
+    const N = 16;
+    const L = 8;
+    const dx = L / N;
+    const cellVol = dx * dx * dx;
+    const coord = createCoordinateArray(N, L);
+
+    const size = N * N * N;
+    const psiRe = new Float32Array(size);
+    const psiIm = new Float32Array(size);
+    const { gX, gY, gZ, pX, pY, pZ } = allocPacketScratch(N);
+
+    const sigma = 0.6;
+    const kx = (2 * Math.PI) / (8 * dx);
+    addPacket3D(
+      psiRe, psiIm, coord, N,
+      0, 0, 0,
+      sigma, sigma, sigma,
+      kx, 0, 0,
+      1,
+      gX, gY, gZ, pX, pY, pZ
+    );
+    renormalize(psiRe, psiIm, cellVol);
+
+    const kArrays = createKSpaceArrays(N, L);
+    const expK = new Float32Array(2 * size);
+    const expVh = new Float32Array(2 * size);
+    const cap = createAbsorbingBoundary(N, 0);
+    const dt = 0.02 * dx * dx;
+    const V = new Float32Array(size);
+    buildKineticExponentials(expK, kArrays, N, dt);
+    buildPotentialExponentials(expVh, V, cap, dt, 0);
+
+    const sRe = new Float32Array(N);
+    const sIm = new Float32Array(N);
+    const E0 = calculateEnergy(psiRe, psiIm, V, N, L);
+    for (let i = 0; i < 200; i++) {
+      timeStep(psiRe, psiIm, expVh, expK, N, sRe, sIm);
+    }
+    const ET = calculateEnergy(psiRe, psiIm, V, N, L);
+    const rel = Math.abs(ET - E0) / Math.max(1e-30, Math.abs(E0));
+    expect(rel).toBeLessThan(5e-3);
+  });
+
+  it('timeStep is approximately time-reversible for free propagation (CAP off)', () => {
+    const N = 16;
+    const L = 8;
+    const dx = L / N;
+    const cellVol = dx * dx * dx;
+    const coord = createCoordinateArray(N, L);
+
+    const size = N * N * N;
+    const psiRe = new Float32Array(size);
+    const psiIm = new Float32Array(size);
+    const { gX, gY, gZ, pX, pY, pZ } = allocPacketScratch(N);
+
+    const sigma = 0.6;
+    const kx = (2 * Math.PI) / (8 * dx);
+    addPacket3D(
+      psiRe, psiIm, coord, N,
+      0, 0, 0,
+      sigma, sigma, sigma,
+      kx, 0, 0,
+      1,
+      gX, gY, gZ, pX, pY, pZ
+    );
+    renormalize(psiRe, psiIm, cellVol);
+
+    const psiRe0 = psiRe.slice();
+    const psiIm0 = psiIm.slice();
+
+    const kArrays = createKSpaceArrays(N, L);
+    const cap = createAbsorbingBoundary(N, 0);
+    const dt = 0.02 * dx * dx;
+    const V = new Float32Array(size);
+
+    const expK = new Float32Array(2 * size);
+    const expVh = new Float32Array(2 * size);
+    buildKineticExponentials(expK, kArrays, N, dt);
+    buildPotentialExponentials(expVh, V, cap, dt, 0);
+
+    const expKBack = new Float32Array(2 * size);
+    const expVhBack = new Float32Array(2 * size);
+    buildKineticExponentials(expKBack, kArrays, N, -dt);
+    buildPotentialExponentials(expVhBack, V, cap, -dt, 0);
+
+    const sRe = new Float32Array(N);
+    const sIm = new Float32Array(N);
+
+    for (let i = 0; i < 60; i++) {
+      timeStep(psiRe, psiIm, expVh, expK, N, sRe, sIm);
+    }
+    for (let i = 0; i < 60; i++) {
+      timeStep(psiRe, psiIm, expVhBack, expKBack, N, sRe, sIm);
+    }
+
+    const err = rmsRel(psiRe, psiIm, psiRe0, psiIm0);
+    expect(err).toBeLessThan(2e-4);
+  });
+
+  it('calculateEnergy throws when array lengths are inconsistent', () => {
+    const N = 2;
+    const L = 2;
+    const size = N * N * N;
+    const psiRe = new Float32Array(size);
+    const psiImShort = new Float32Array(size - 1);
+    expect(() => calculateEnergy(psiRe, psiImShort, null, N, L)).toThrow(/same length/);
+
+    const psiShort = new Float32Array(size - 1);
+    expect(() => calculateEnergy(psiShort, psiShort, null, N, L)).toThrow(/N\^3/);
+
+    const vBad = new Float32Array(size - 1);
+    expect(() => calculateEnergy(psiRe, psiRe, vBad, N, L)).toThrow(/V\.length/);
   });
 
   it('addPacket3D yields positive phase gradient along +x near center when kx>0', () => {

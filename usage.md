@@ -7,7 +7,7 @@ See Concepts & Reference: [usage/concepts.md](./usage/concepts.md)
 
 ## prerequisites
 
-- **node.js**: version 18 or higher (recommended for vite and react). download from [nodejs.org](https://nodejs.org/).
+- **node.js**: version 20.19 or higher (recommended for vite and react). download from [nodejs.org](https://nodejs.org/).
 - **npm**: comes bundled with node.js. version 7 or higher is recommended.
 - **modern web browser**: chrome, firefox, safari, or edge with webgl support enabled (required for three.js rendering).
 
@@ -64,7 +64,7 @@ the application consists of a 3d visualisation canvas and a control panel. here'
    - use the "packet" section in the controls to configure:
      - **σ (width)**: controls the spread of the gaussian packet (0.3 to 1.5).
      - **centre (x, y, z)**: position of the packet centre (-l/2 to l/2).
-    - **k0 (x, y, z)**: wave vector components (range is +/- kMax shown in the UI).
+     - **k0 (x, y, z)**: wave vector components (range is +/- kMax shown in the UI).
      - **amplitude**: overall strength of the packet (0.5 to 2.0).
    - click "add packet" to inject the wave packet into the simulation.
 
@@ -101,7 +101,7 @@ the cap only engages when both width and strength are positive. use it to suppre
 - start with n=32 for responsive interaction.
 - use smaller dt values for more accurate simulations.
 - the harmonic and spherical well potentials are good for testing bound states.
-- points represent |ψ|² (probability density) by size and arg(ψ) (phase) by colour when phase hue is enabled.
+- points represent |ψ| (the square root of probability density |ψ|²) by size and arg(ψ) (phase) by colour when phase hue is enabled.
 
 ## troubleshooting
 

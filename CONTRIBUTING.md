@@ -8,7 +8,7 @@ By participating, you agree to abide by our Code of Conduct (see `CODE_OF_CONDUC
 
 ## Prerequisites
 
-- Node.js 18+ recommended
+- Node.js 20.19+ recommended
 - npm (or pnpm/yarn). The repo uses npm scripts; pnpm is preferred if you use it locally.
 
 ## Getting started

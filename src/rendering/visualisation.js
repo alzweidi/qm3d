@@ -13,7 +13,7 @@ import { createQuantumShaderMaterial } from './shaders.js';
  */
 export function initialiseThreeJS(mountElement, L) {
   // clean up any existing content
-  if (mountElement) mountElement.innerHTML = "";
+  if (mountElement) mountElement.replaceChildren();
 
   // create scene
   const scene = new THREE.Scene();

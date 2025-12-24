@@ -201,7 +201,7 @@ export function kineticFullStep(psiRe, psiIm, expK, N, scratchRe, scratchIm) {
     throw new Error(`kineticFullStep requires expK.length === 2 * psi length; got psi length=${len}, expK.length=${expK.length}`);
   }
   if (scratchRe.length < N || scratchIm.length < N) {
-    throw new Error(`kineticFullStep requires scratchRe/scratchIm length d N; got scratchRe.length=${scratchRe.length}, scratchIm.length=${scratchIm.length}, N=${N}`);
+    throw new Error(`kineticFullStep requires scratchRe/scratchIm length >= N; got scratchRe.length=${scratchRe.length}, scratchIm.length=${scratchIm.length}, N=${N}`);
   }
 
   // forward FFT to momentum space
@@ -346,4 +346,62 @@ export function calculateNorm(psiRe, psiIm, cellVol) {
     norm += pr*pr + pi*pi; 
   }
   return norm * cellVol;
+}
+
+export function calculateEnergy(psiRe, psiIm, V, N, L) {
+  validateDomainSize(L, 'calculateEnergy');
+  validateGridSize(N);
+  const len = psiRe.length;
+  if (psiIm.length !== len) {
+    throw new Error(`calculateEnergy requires psiRe and psiIm to have the same length; got psiRe.length=${len}, psiIm.length=${psiIm.length}`);
+  }
+  const expectedLen = N * N * N;
+  if (len !== expectedLen) {
+    throw new Error(`calculateEnergy requires psi arrays length N^3; got psi length=${len}, N=${N}`);
+  }
+  if (V != null && V.length !== len) {
+    throw new Error(`calculateEnergy requires V.length === psi length when V is provided; got psi length=${len}, V.length=${V.length}`);
+  }
+
+  const dx = L / N;
+  const cellVol = dx * dx * dx;
+
+  let potential = 0;
+  if (V != null) {
+    for (let i = 0; i < len; i++) {
+      const pr = psiRe[i];
+      const pi = psiIm[i];
+      potential += V[i] * (pr * pr + pi * pi);
+    }
+  }
+
+  const kArrays = createKSpaceArrays(N, L);
+  const { kx2, ky2, kz2 } = kArrays;
+
+  const reHat = psiRe.slice();
+  const imHat = psiIm.slice();
+  const sRe = new Float32Array(N);
+  const sIm = new Float32Array(N);
+  fft3d(reHat, imHat, N, false, sRe, sIm);
+
+  let kSum = 0;
+  for (let z = 0; z < N; z++) {
+    const zOff = N * N * z;
+    const kz2v = kz2[z];
+    for (let y = 0; y < N; y++) {
+      const yOff = zOff + N * y;
+      const ky2v = ky2[y];
+      for (let x = 0; x < N; x++) {
+        const id = yOff + x;
+        const pr = reHat[id];
+        const pi = imHat[id];
+        const k2 = kx2[x] + ky2v + kz2v;
+        kSum += k2 * (pr * pr + pi * pi);
+      }
+    }
+  }
+
+  const invN3 = 1 / (N * N * N);
+  const kinetic = 0.5 * cellVol * invN3 * kSum;
+  return kinetic + potential * cellVol;
 }

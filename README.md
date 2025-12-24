@@ -19,7 +19,7 @@ small, fast, and fairly pretty. a split‑step fourier (strang) tdse solver in t
 - 3d gaussian packet injection with steerable centre, width, k‑vector, and amplitude
 - presets: free space, plane barrier, box well, spherical well, harmonic
 - absorbing boundaries (cap) to tame fft periodic wrap‑around
-- real‑time view: |ψ|² as density; phase as hue; orbit/zoom/pan via orbitcontrols
+- real‑time view: |ψ|² as density (point size ∝ |ψ|); phase as hue; orbit/zoom/pan via orbitcontrols
 - responsive ui with sliders + sensible clamps (k respects nyquist)
 
 *note:* imports and paths are plain js/esm; see `engine.jsx` for usage.
@@ -34,7 +34,7 @@ summer boredom + wanting to relearn some physics. i saw a few open‑source 2d t
 
 ## install & run
 
-prereqs: node 18+ recommended.
+prereqs: node 20.19+ recommended.
 
 ```bash
 npm i
@@ -62,7 +62,8 @@ open the printed localhost url. vite will hot‑reload when you tweak code.
 
 ## under the hood (short + honest)
 
-- **solver:** split‑step spectral (strang): `e^{-iVΔt/2} → fft → e^{-iKΔt} → ifft → e^{-iVΔt/2}`
+- **equation (units ħ=m=1):** `i ∂ψ/∂t = ( -½∇² + V - iW ) ψ` (CAP uses `W = strength · s^4`, set width/strength to zero to disable).
+- **solver:** split‑step spectral (strang): `e^{-iVΔt/2} → fft → e^{-i(k²/2)Δt} → ifft → e^{-iVΔt/2}`
 - **k‑grid:** centred using fft ordering; `k = 2π m / L` with `m ∈ [−n/2,…,n/2−1]`.
 - **kinetic:** `θ_k = −½ k² dt` baked into a complex exp table per cell.
 - **potential:** half‑step phase with optional cap decay `exp(-0.5 * strength * s^4 * dt)`.

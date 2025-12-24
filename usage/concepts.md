@@ -80,8 +80,8 @@ units, the group velocity ≈ k.
 In plain words: Set the direction and speed the blob travels.
 
 Amplitude: Linear scale of the packet you add (superposes with what’s already
-there). The norm isn’t force‑normalised after each add. The CAP can drain total
-probability.
+there). The wavefunction is renormalised after each packet add. The CAP can
+drain total probability over time when enabled.
 
 In plain words: How strong the new blob is. Adding many blobs stacks them. The
 sponge can slowly fade them.
